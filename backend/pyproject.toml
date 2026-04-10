@@ -19,6 +19,9 @@ dependencies = [
     "wecom-aibot-python-sdk>=0.1.6",
     "redis[hiredis]>=5.0",
     "minio>=7.2",
+    "langgraph-checkpoint-postgres>=3.0.5",
+    "psycopg[binary]>=3.3.3",
+    "psycopg-pool>=3.3.0",
 ]
 
 [dependency-groups]

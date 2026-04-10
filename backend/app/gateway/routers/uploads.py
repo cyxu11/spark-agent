@@ -8,6 +8,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from deerflow.config.paths import get_paths
+from deerflow.config.uploads_config import get_uploads_config
 from deerflow.sandbox.sandbox_provider import get_sandbox_provider
 from deerflow.uploads.manager import (
     PathTraversalError,
@@ -73,6 +74,23 @@ async def upload_files(
     sandbox_id = sandbox_provider.acquire(thread_id)
     sandbox = sandbox_provider.get(sandbox_id)
 
+    uploads_cfg = get_uploads_config()
+    minio_backend = None
+    if uploads_cfg.backend == "minio" and uploads_cfg.minio:
+        try:
+            from deerflow.uploads.backends.minio import MinioUploadBackend
+
+            minio_backend = MinioUploadBackend(
+                endpoint=uploads_cfg.minio.endpoint,
+                access_key=uploads_cfg.minio.access_key,
+                secret_key=uploads_cfg.minio.secret_key,
+                bucket=uploads_cfg.minio.bucket,
+                secure=uploads_cfg.minio.secure,
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize MinIO backend: {e}")
+            raise HTTPException(status_code=500, detail=f"MinIO backend unavailable: {e}")
+
     for file in files:
         if not file.filename:
             continue
@@ -94,6 +112,13 @@ async def upload_files(
                 _make_file_sandbox_writable(file_path)
                 sandbox.update_file(virtual_path, content)
 
+            if minio_backend is not None:
+                import mimetypes
+
+                content_type = mimetypes.guess_type(safe_filename)[0] or "application/octet-stream"
+                minio_backend.save(thread_id, safe_filename, content, content_type=content_type)
+                logger.info(f"Uploaded file to MinIO: {thread_id}/{safe_filename}")
+
             file_info = {
                 "filename": safe_filename,
                 "size": str(len(content)),
@@ -109,10 +134,15 @@ async def upload_files(
                 md_path = await convert_file_to_markdown(file_path)
                 if md_path:
                     md_virtual_path = upload_virtual_path(md_path.name)
+                    md_bytes = md_path.read_bytes()
 
                     if sandbox_id != "local":
                         _make_file_sandbox_writable(md_path)
-                        sandbox.update_file(md_virtual_path, md_path.read_bytes())
+                        sandbox.update_file(md_virtual_path, md_bytes)
+
+                    if minio_backend is not None:
+                        minio_backend.save(thread_id, md_path.name, md_bytes, content_type="text/markdown")
+                        logger.info(f"Uploaded converted markdown to MinIO: {thread_id}/{md_path.name}")
 
                     file_info["markdown_file"] = md_path.name
                     file_info["markdown_path"] = str(sandbox_uploads / md_path.name)
