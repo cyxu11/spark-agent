@@ -1,3 +1,5 @@
+import logging
+import mimetypes
 from pathlib import Path
 from typing import Annotated
 
@@ -8,8 +10,16 @@ from langgraph.typing import ContextT
 
 from deerflow.agents.thread_state import ThreadState
 from deerflow.config.paths import VIRTUAL_PATH_PREFIX, get_paths
+from deerflow.config.uploads_config import get_uploads_config
 
 OUTPUTS_VIRTUAL_PREFIX = f"{VIRTUAL_PATH_PREFIX}/outputs"
+
+logger = logging.getLogger(__name__)
+
+try:
+    from deerflow.uploads.backends.minio import MinioUploadBackend
+except ImportError:
+    MinioUploadBackend = None  # type: ignore[assignment,misc]
 
 
 def _normalize_presented_filepath(
@@ -59,6 +69,30 @@ def _normalize_presented_filepath(
     return f"{OUTPUTS_VIRTUAL_PREFIX}/{relative_path.as_posix()}"
 
 
+def _sync_to_minio(thread_id: str, virtual_path: str, physical_path: Path) -> None:
+    """Upload a single output file to MinIO. Non-fatal on error."""
+    uploads_cfg = get_uploads_config()
+    if uploads_cfg.backend != "minio" or not uploads_cfg.minio:
+        return
+
+    try:
+        backend = MinioUploadBackend(
+            endpoint=uploads_cfg.minio.endpoint,
+            access_key=uploads_cfg.minio.access_key,
+            secret_key=uploads_cfg.minio.secret_key,
+            bucket=uploads_cfg.minio.bucket,
+            secure=uploads_cfg.minio.secure,
+        )
+        # Strip "/mnt/user-data/" prefix → "outputs/filename.ext"
+        prefix = VIRTUAL_PATH_PREFIX.lstrip("/") + "/"
+        relative = virtual_path.lstrip("/")[len(prefix):]
+        content_type = mimetypes.guess_type(physical_path.name)[0] or "application/octet-stream"
+        backend.save(thread_id, relative, physical_path.read_bytes(), content_type=content_type)
+        logger.info("Synced output to MinIO: %s/%s", thread_id, relative)
+    except Exception:
+        logger.warning("MinIO sync failed for %s (non-fatal)", virtual_path, exc_info=True)
+
+
 @tool("present_files", parse_docstring=True)
 def present_file_tool(
     runtime: ToolRuntime[ContextT, ThreadState],
@@ -90,6 +124,23 @@ def present_file_tool(
         return Command(
             update={"messages": [ToolMessage(f"Error: {exc}", tool_call_id=tool_call_id)]},
         )
+
+    thread_id = (runtime.context or {}).get("thread_id")
+    if thread_id:
+        thread_data = (runtime.state or {}).get("thread_data") or {}
+        outputs_path = thread_data.get("outputs_path")
+        if outputs_path:
+            outputs_dir = Path(outputs_path).resolve()
+            for virtual_path, original_filepath in zip(normalized_paths, filepaths):
+                stripped = original_filepath.lstrip("/")
+                virtual_prefix = VIRTUAL_PATH_PREFIX.lstrip("/")
+                if stripped.startswith(virtual_prefix + "/"):
+                    physical = get_paths().resolve_virtual_path(thread_id, original_filepath)
+                else:
+                    physical = Path(original_filepath).expanduser().resolve()
+                if not physical.is_absolute():
+                    physical = outputs_dir / physical
+                _sync_to_minio(thread_id, virtual_path, physical)
 
     # The merge_artifacts reducer will handle merging and deduplication
     return Command(

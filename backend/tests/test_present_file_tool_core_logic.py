@@ -66,3 +66,107 @@ def test_present_files_rejects_paths_outside_outputs(tmp_path):
 
     assert "artifacts" not in result.update
     assert result.update["messages"][0].content == f"Error: Only files in /mnt/user-data/outputs can be presented: {leaked_path}"
+
+
+from unittest.mock import MagicMock, patch
+
+
+def _make_minio_config():
+    """Return a UploadsConfig-shaped namespace with MinIO enabled."""
+    minio_cfg = SimpleNamespace(
+        endpoint="localhost:9000",
+        access_key="minioadmin",
+        secret_key="deerflow123",
+        bucket="deerflow-uploads",
+        secure=False,
+    )
+    return SimpleNamespace(backend="minio", minio=minio_cfg)
+
+
+def test_present_files_uploads_to_minio_when_configured(tmp_path, monkeypatch):
+    """Files are uploaded to MinIO with key outputs/{filename}."""
+    outputs_dir = tmp_path / "threads" / "thread-1" / "user-data" / "outputs"
+    outputs_dir.mkdir(parents=True)
+    artifact = outputs_dir / "report.xlsx"
+    artifact.write_bytes(b"xlsx-content")
+
+    mock_backend = MagicMock()
+
+    monkeypatch.setattr(
+        present_file_tool_module,
+        "get_uploads_config",
+        lambda: _make_minio_config(),
+    )
+    with patch(
+        "deerflow.tools.builtins.present_file_tool.MinioUploadBackend",
+        return_value=mock_backend,
+    ):
+        result = present_file_tool_module.present_file_tool.func(
+            runtime=_make_runtime(str(outputs_dir)),
+            filepaths=[str(artifact)],
+            tool_call_id="tc-minio-1",
+        )
+
+    assert result.update["artifacts"] == ["/mnt/user-data/outputs/report.xlsx"]
+    mock_backend.save.assert_called_once_with(
+        "thread-1",
+        "outputs/report.xlsx",
+        b"xlsx-content",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+def test_present_files_skips_minio_when_not_configured(tmp_path, monkeypatch):
+    """No MinIO upload when backend is 'local'."""
+    outputs_dir = tmp_path / "threads" / "thread-1" / "user-data" / "outputs"
+    outputs_dir.mkdir(parents=True)
+    artifact = outputs_dir / "notes.txt"
+    artifact.write_text("hello")
+
+    monkeypatch.setattr(
+        present_file_tool_module,
+        "get_uploads_config",
+        lambda: SimpleNamespace(backend="local", minio=None),
+    )
+    mock_backend_cls = MagicMock()
+
+    with patch(
+        "deerflow.tools.builtins.present_file_tool.MinioUploadBackend",
+        mock_backend_cls,
+    ):
+        present_file_tool_module.present_file_tool.func(
+            runtime=_make_runtime(str(outputs_dir)),
+            filepaths=[str(artifact)],
+            tool_call_id="tc-no-minio",
+        )
+
+    mock_backend_cls.assert_not_called()
+
+
+def test_present_files_minio_failure_is_nonfatal(tmp_path, monkeypatch):
+    """MinIO upload error is logged as warning; tool still succeeds."""
+    outputs_dir = tmp_path / "threads" / "thread-1" / "user-data" / "outputs"
+    outputs_dir.mkdir(parents=True)
+    artifact = outputs_dir / "data.csv"
+    artifact.write_text("a,b\n1,2")
+
+    mock_backend = MagicMock()
+    mock_backend.save.side_effect = Exception("connection refused")
+
+    monkeypatch.setattr(
+        present_file_tool_module,
+        "get_uploads_config",
+        lambda: _make_minio_config(),
+    )
+    with patch(
+        "deerflow.tools.builtins.present_file_tool.MinioUploadBackend",
+        return_value=mock_backend,
+    ):
+        result = present_file_tool_module.present_file_tool.func(
+            runtime=_make_runtime(str(outputs_dir)),
+            filepaths=[str(artifact)],
+            tool_call_id="tc-fail",
+        )
+
+    assert result.update["artifacts"] == ["/mnt/user-data/outputs/data.csv"]
+    assert result.update["messages"][0].content == "Successfully presented files"
