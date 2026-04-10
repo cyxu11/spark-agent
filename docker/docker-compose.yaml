@@ -78,8 +78,9 @@ services:
     volumes:
       - ${DEER_FLOW_CONFIG_PATH}:/app/backend/config.yaml:ro
       - ${DEER_FLOW_EXTENSIONS_CONFIG_PATH}:/app/backend/extensions_config.json:ro
-      - ../skills:/app/skills:ro
+      - skills_data:/app/skills                          # 集群模式共享 skills 目录
       - ${DEER_FLOW_HOME}:/app/backend/.deer-flow
+      - threads_data:/app/backend/.deer-flow/threads     # 集群模式共享 threads 工作区
       # DooD: AioSandboxProvider starts sandbox containers via host Docker daemon
       - ${DEER_FLOW_DOCKER_SOCKET}:/var/run/docker.sock
       # CLI auth directories for auto-auth (Claude Code + Codex CLI)
@@ -138,7 +139,8 @@ services:
       - ${DEER_FLOW_CONFIG_PATH}:/app/backend/config.yaml:ro
       - ${DEER_FLOW_EXTENSIONS_CONFIG_PATH}:/app/backend/extensions_config.json:ro
       - ${DEER_FLOW_HOME}:/app/backend/.deer-flow
-      - ../skills:/app/skills:ro
+      - threads_data:/app/backend/.deer-flow/threads     # 集群模式共享 threads 工作区
+      - skills_data:/app/skills                          # 集群模式共享 skills 目录
       - ../backend/.langgraph_api:/app/backend/.langgraph_api
       # DooD: same as gateway
       - ${DEER_FLOW_DOCKER_SOCKET}:/var/run/docker.sock
@@ -212,3 +214,7 @@ services:
 networks:
   deer-flow:
     driver: bridge
+
+volumes:
+  skills_data:    # Skills 目录共享（集群模式）
+  threads_data:   # 线程工作区共享 workspace + outputs + uploads（集群模式）

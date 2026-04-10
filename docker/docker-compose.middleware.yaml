@@ -135,3 +135,5 @@ volumes:
   redis_replica1_data:
   redis_replica2_data:
   minio_data:
+  skills_data:      # Skills 目录共享（集群模式）
+  threads_data:     # 线程工作区共享 workspace + outputs + uploads（集群模式）
