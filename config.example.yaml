@@ -657,6 +657,26 @@ checkpointer:
 #   connection_string: postgresql://user:password@localhost:5432/deerflow
 
 # ============================================================================
+# Cluster Mode: Stream Bridge & Uploads
+# ============================================================================
+# Uncomment and configure these sections when deploying in multi-node cluster mode.
+# See docs/plans/2026-04-08-cluster-deployment-design.md for full setup guide.
+
+# stream_bridge:
+#   type: redis
+#   redis_url: $REDIS_URL
+#   queue_maxsize: 256
+
+# uploads:
+#   backend: minio
+#   minio:
+#     endpoint: $MINIO_ENDPOINT
+#     access_key: $MINIO_ACCESS_KEY
+#     secret_key: $MINIO_SECRET_KEY
+#     bucket: deerflow-uploads
+#     secure: false
+
+# ============================================================================
 # IM Channels Configuration
 # ============================================================================
 # Connect DeerFlow to external messaging platforms.
