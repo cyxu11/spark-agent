@@ -1,4 +1,4 @@
-import { type EventsResponse } from "./types";
+import { type EventsResponse, type RunsResponse } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "";
 
@@ -17,6 +17,12 @@ export async function fetchRunEvents(
   );
   if (!res.ok) throw new Error(`fetchRunEvents: ${res.status}`);
   return res.json() as Promise<EventsResponse>;
+}
+
+export async function fetchThreadRuns(threadId: string): Promise<RunsResponse> {
+  const res = await fetch(`${BASE}/api/threads/${threadId}/event-runs`);
+  if (!res.ok) throw new Error(`fetchThreadRuns: ${res.status}`);
+  return res.json() as Promise<RunsResponse>;
 }
 
 export function createRunEventSource(

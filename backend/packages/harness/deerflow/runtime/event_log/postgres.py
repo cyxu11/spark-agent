@@ -119,6 +119,28 @@ class PostgresEventLog:
             logger.warning("event_log: list_events failed", exc_info=True)
             return []
 
+    async def list_runs(self, *, thread_id: str) -> list[dict]:
+        """Return distinct run_ids for a thread, ordered by first event time."""
+        await self._ensure_table()
+        try:
+            import psycopg
+            import psycopg.rows
+            sql = """
+                SELECT run_id, MIN(created_at)::text AS started_at
+                FROM run_event_log
+                WHERE thread_id = %s
+                GROUP BY run_id
+                ORDER BY MIN(id)
+            """
+            async with await psycopg.AsyncConnection.connect(self._conn_str) as conn:
+                async with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                    await cur.execute(sql, (thread_id,))
+                    rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+        except Exception:
+            logger.warning("event_log: list_runs failed for thread=%s", thread_id, exc_info=True)
+            return []
+
     async def subscribe_live(
         self, run_id: str, *, after_id: int = 0
     ) -> AsyncIterator[dict]:

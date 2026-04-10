@@ -12,28 +12,69 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { fetchThreadRuns } from "@/core/run-events/api";
 import { useEventLog } from "@/core/run-events/use-event-log";
 
 import { EventLogList } from "./event-log-list";
 
+interface RunInfo {
+  run_id: string;
+  is_live?: boolean;
+}
+
 interface SessionEventsSheetProps {
   threadId: string;
-  runs: Array<{ run_id: string; is_live?: boolean }>;
+  runs: RunInfo[];
 }
 
 export function SessionEventsSheet({ threadId, runs }: SessionEventsSheetProps) {
   const [open, setOpen] = useState(false);
-  const latestRun = runs[runs.length - 1];
+  // Merged list: prop runs (live) + fetched historical runs
+  const [allRuns, setAllRuns] = useState<RunInfo[]>(runs);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(
-    latestRun?.run_id ?? null,
+    runs[runs.length - 1]?.run_id ?? null,
   );
 
+  // When the sheet opens, fetch historical runs from the DB
   useEffect(() => {
-    const latest = runs[runs.length - 1]?.run_id ?? null;
+    if (!open || !threadId) return;
+    fetchThreadRuns(threadId)
+      .then(({ runs: fetched }) => {
+        if (!fetched?.length) return; // 没有历史数据时保留当前状态
+        setAllRuns((prev) => {
+          const liveMap = new Map(prev.filter((r) => r.is_live).map((r) => [r.run_id, r]));
+          const fetchedIds = new Set(fetched.map((r) => r.run_id));
+          // 以 DB 历史记录为基础，overlay live 状态
+          const merged = fetched.map((r) => liveMap.get(r.run_id) ?? { run_id: r.run_id });
+          // 把还没写入 DB 的 live run 追加进来
+          for (const liveRun of prev.filter((r) => r.is_live)) {
+            if (!fetchedIds.has(liveRun.run_id)) merged.push(liveRun);
+          }
+          return merged;
+        });
+      })
+      .catch(() => {/* keep existing */});
+  }, [open, threadId]);
+
+  // Sync allRuns when live prop runs change (new run started)
+  useEffect(() => {
+    if (runs.length === 0) return;
+    setAllRuns((prev) => {
+      const ids = new Set(prev.map((r) => r.run_id));
+      const merged = prev.map((r) => {
+        const live = runs.find((lr) => lr.run_id === r.run_id);
+        return live ? { ...r, is_live: live.is_live } : r;
+      });
+      runs.forEach((r) => {
+        if (!ids.has(r.run_id)) merged.push(r);
+      });
+      return merged;
+    });
+    const latest = runs[runs.length - 1]?.run_id;
     if (latest) setSelectedRunId(latest);
   }, [runs]);
 
-  const isLive = runs.find((r) => r.run_id === selectedRunId)?.is_live ?? false;
+  const isLive = allRuns.find((r) => r.run_id === selectedRunId)?.is_live ?? false;
   const { events, isLoading } = useEventLog(threadId, selectedRunId, isLive);
 
   return (
@@ -48,14 +89,14 @@ export function SessionEventsSheet({ threadId, runs }: SessionEventsSheetProps) 
           <SheetTitle className="text-sm font-medium">Session Events</SheetTitle>
         </SheetHeader>
 
-        {runs.length > 1 ? (
+        {allRuns.length > 1 ? (
           <Tabs
             value={selectedRunId ?? undefined}
             onValueChange={setSelectedRunId}
             className="flex flex-1 flex-col overflow-hidden"
           >
             <TabsList className="mx-4 mt-3 mb-1 h-8">
-              {runs.map((r, i) => (
+              {allRuns.map((r, i) => (
                 <TabsTrigger key={r.run_id} value={r.run_id} className="text-xs">
                   Run {i + 1}
                   {r.is_live && (
@@ -64,7 +105,7 @@ export function SessionEventsSheet({ threadId, runs }: SessionEventsSheetProps) 
                 </TabsTrigger>
               ))}
             </TabsList>
-            {runs.map((r) => (
+            {allRuns.map((r) => (
               <TabsContent
                 key={r.run_id}
                 value={r.run_id}

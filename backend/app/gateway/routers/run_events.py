@@ -16,6 +16,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["run-events"])
 
 
+class RunSummary(BaseModel):
+    run_id: str
+    started_at: str
+
+
+class RunsResponse(BaseModel):
+    runs: list[RunSummary]
+
+
 class RunEvent(BaseModel):
     id: int
     run_id: str
@@ -29,6 +38,18 @@ class RunEvent(BaseModel):
 class EventsResponse(BaseModel):
     events: list[RunEvent]
     next_after_id: int
+
+
+@router.get("/api/threads/{thread_id}/event-runs", response_model=RunsResponse)
+async def list_thread_runs(
+    thread_id: str,
+    event_log=Depends(get_event_log),
+):
+    """Return all run_ids recorded for this thread in the event log, ordered by start time."""
+    if event_log is None:
+        return RunsResponse(runs=[])
+    rows = await event_log.list_runs(thread_id=thread_id)
+    return RunsResponse(runs=[RunSummary(**r) for r in rows])
 
 
 @router.get("/api/threads/{thread_id}/runs/{run_id}/events", response_model=EventsResponse)
