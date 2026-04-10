@@ -46,11 +46,19 @@ export function SessionEventsSheet({ threadId, runs }: SessionEventsSheetProps) 
           const fetchedIds = new Set(fetched.map((r) => r.run_id));
           // 以 DB 历史记录为基础，overlay live 状态
           const merged = fetched.map((r) => liveMap.get(r.run_id) ?? { run_id: r.run_id });
-          // 把还没写入 DB 的 live run 追加进来
-          for (const liveRun of prev.filter((r) => r.is_live)) {
-            if (!fetchedIds.has(liveRun.run_id)) merged.push(liveRun);
+          // 把所有 prev runs（不论 live 与否）中不在 DB 里的都追加进来
+          for (const prevRun of prev) {
+            if (!fetchedIds.has(prevRun.run_id)) merged.push(prevRun);
           }
           return merged;
+        });
+        // 如果当前没有选中的 run，或选中的 run 不在历史列表里，切换到最新的历史 run
+        setSelectedRunId((cur) => {
+          const fetchedIds = new Set(fetched.map((r) => r.run_id));
+          if (!cur || !fetchedIds.has(cur)) {
+            return fetched[fetched.length - 1]?.run_id ?? cur;
+          }
+          return cur;
         });
       })
       .catch(() => {/* keep existing */});
