@@ -780,3 +780,10 @@ checkpointer:
 #     use: my_package:MyGuardrailProvider
 #     config:
 #       key: value
+
+
+# Run event log — persists all SSE events to PostgreSQL for replay and monitoring
+# Requires checkpointer.type: postgres to share the same DSN
+# event_log:
+#   enabled: false
+#   connection_string: $POSTGRES_DSN
