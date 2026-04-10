@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { type RunEvent } from "@/core/run-events/types";

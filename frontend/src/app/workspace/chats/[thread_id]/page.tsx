@@ -17,6 +17,7 @@ import {
   MESSAGE_LIST_FOLLOWUPS_EXTRA_PADDING_BOTTOM,
 } from "@/components/workspace/messages";
 import { ThreadContext } from "@/components/workspace/messages/context";
+import { SessionEventsSheet } from "@/components/workspace/session-events/session-events-sheet";
 import { ThreadTitle } from "@/components/workspace/thread-title";
 import { TodoList } from "@/components/workspace/todo-list";
 import { TokenUsageIndicator } from "@/components/workspace/token-usage-indicator";
@@ -44,7 +45,7 @@ export default function ChatPage() {
 
   const { showNotification } = useNotification();
 
-  const [thread, sendMessage, isUploading] = useThreadStream({
+  const [thread, sendMessage, isUploading, currentRunId] = useThreadStream({
     threadId: isNewThread ? undefined : threadId,
     context: settings.context,
     isMock,
@@ -106,6 +107,16 @@ export default function ChatPage() {
               <TokenUsageIndicator messages={thread.messages} />
               <ExportTrigger threadId={threadId} />
               <ArtifactTrigger />
+              {threadId && (
+                <SessionEventsSheet
+                  threadId={threadId}
+                  runs={
+                    currentRunId
+                      ? [{ run_id: currentRunId, is_live: thread.isLoading }]
+                      : []
+                  }
+                />
+              )}
             </div>
           </header>
           <main className="flex min-h-0 max-w-full grow flex-col">

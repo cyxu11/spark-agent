@@ -149,6 +149,7 @@ export function useThreadStream({
   // and to allow access to the current thread id in onUpdateEvent
   const threadIdRef = useRef<string | null>(threadId ?? null);
   const startedRef = useRef(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
   const listeners = useRef({
     onStart,
@@ -212,6 +213,7 @@ export function useThreadStream({
     onCreated(meta) {
       handleStreamStart(meta.thread_id);
       setOnStreamThreadId(meta.thread_id);
+      setCurrentRunId(meta.run_id);
     },
     onLangChainEvent(event) {
       if (event.event === "on_tool_end") {
@@ -520,7 +522,7 @@ export function useThreadStream({
         } as typeof thread)
       : thread;
 
-  return [mergedThread, sendMessage, isUploading] as const;
+  return [mergedThread, sendMessage, isUploading, currentRunId] as const;
 }
 
 export function useThreads(
