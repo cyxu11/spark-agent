@@ -201,3 +201,118 @@ class TestGetMemoryStorage:
         with patch("deerflow.agents.memory.storage.get_memory_config", return_value=MemoryConfig(storage_class="builtins.dict")):
             storage = get_memory_storage()
             assert isinstance(storage, FileMemoryStorage)
+
+
+def test_get_memory_storage_returns_postgres_when_configured(monkeypatch, tmp_path):
+    """get_memory_storage() should return PostgresMemoryStorage when storage_class points to it
+    and a valid connection_string is available from checkpointer config."""
+    from unittest.mock import MagicMock, patch
+    from deerflow.agents.memory.storage import MemoryStorage
+
+    # Build a real class so isinstance/issubclass checks pass; capture init kwargs
+    init_kwargs = {}
+
+    class FakePostgresStorage(MemoryStorage):
+        __name__ = "PostgresMemoryStorage"
+
+        def __init__(self, *, connection_string: str):
+            init_kwargs["connection_string"] = connection_string
+
+        def load(self, agent_name=None):
+            return {}
+
+        def reload(self, agent_name=None):
+            return {}
+
+        def save(self, data, agent_name=None):
+            return True
+
+    FakePostgresStorage.__name__ = "PostgresMemoryStorage"
+    postgres_class_path = "deerflow.agents.memory.postgres_storage.PostgresMemoryStorage"
+    # Patch checkpointer config to return postgres type with DSN
+    mock_cp_config = MagicMock()
+    mock_cp_config.type = "postgres"
+    mock_cp_config.connection_string = "postgresql://user:pass@localhost/db"
+    with patch(
+        "deerflow.agents.memory.storage.get_checkpointer_config",
+        return_value=mock_cp_config,
+    ):
+        with patch(
+            "deerflow.agents.memory.storage._import_storage_class",
+            return_value=FakePostgresStorage,
+        ):
+            from deerflow.config.memory_config import MemoryConfig
+            from deerflow.agents.memory import storage as mem_storage
+            # Reset singleton
+            mem_storage._storage_instance = None
+            cfg = MemoryConfig(storage_class=postgres_class_path)
+            with patch("deerflow.agents.memory.storage.get_memory_config", return_value=cfg):
+                instance = mem_storage.get_memory_storage()
+    assert init_kwargs == {"connection_string": "postgresql://user:pass@localhost/db"}
+    assert isinstance(instance, FakePostgresStorage)
+    # Cleanup
+    mem_storage._storage_instance = None
+
+
+def test_get_memory_storage_uses_memory_config_dsn_over_checkpointer(monkeypatch):
+    """memory.connection_string takes precedence over checkpointer DSN."""
+    from unittest.mock import MagicMock, patch
+    from deerflow.agents.memory.storage import MemoryStorage
+
+    init_kwargs = {}
+
+    class FakePostgresStorage(MemoryStorage):
+        def __init__(self, *, connection_string: str):
+            init_kwargs["connection_string"] = connection_string
+
+        def load(self, agent_name=None):
+            return {}
+
+        def reload(self, agent_name=None):
+            return {}
+
+        def save(self, data, agent_name=None):
+            return True
+
+    FakePostgresStorage.__name__ = "PostgresMemoryStorage"
+    postgres_class_path = "deerflow.agents.memory.postgres_storage.PostgresMemoryStorage"
+    mock_cp_config = MagicMock()
+    mock_cp_config.type = "postgres"
+    mock_cp_config.connection_string = "postgresql://checkpointer/db"
+    with patch(
+        "deerflow.agents.memory.storage.get_checkpointer_config",
+        return_value=mock_cp_config,
+    ):
+        with patch(
+            "deerflow.agents.memory.storage._import_storage_class",
+            return_value=FakePostgresStorage,
+        ):
+            from deerflow.config.memory_config import MemoryConfig
+            from deerflow.agents.memory import storage as mem_storage
+            mem_storage._storage_instance = None
+            cfg = MemoryConfig(
+                storage_class=postgres_class_path,
+                connection_string="postgresql://memory-specific/db",
+            )
+            with patch("deerflow.agents.memory.storage.get_memory_config", return_value=cfg):
+                mem_storage.get_memory_storage()
+    assert init_kwargs == {"connection_string": "postgresql://memory-specific/db"}
+    # Cleanup
+    mem_storage._storage_instance = None
+
+
+def test_postgres_memory_storage_save_updates_last_updated():
+    """PostgresMemoryStorage.save should update lastUpdated like FileMemoryStorage does."""
+    from unittest.mock import MagicMock, patch
+    from deerflow.agents.memory.postgres_storage import PostgresMemoryStorage
+    with patch("psycopg.connect") as mock_connect:
+        mock_conn = MagicMock()
+        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
+        storage = PostgresMemoryStorage.__new__(PostgresMemoryStorage)
+        storage._conn_str = "postgresql://x/y"
+        storage._cache = {}
+        data = {"facts": ["item1"]}
+        with patch.object(storage, "_execute"):
+            storage.save(data, agent_name="test-agent")
+        assert "lastUpdated" in data

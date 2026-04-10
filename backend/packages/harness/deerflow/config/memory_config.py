@@ -27,6 +27,13 @@ class MemoryConfig(BaseModel):
         default="deerflow.agents.memory.storage.FileMemoryStorage",
         description="The class path for memory storage provider",
     )
+    connection_string: str | None = Field(
+        default=None,
+        description=(
+            "PostgreSQL DSN for PostgresMemoryStorage. "
+            "If not set, falls back to checkpointer.connection_string when checkpointer.type=postgres."
+        ),
+    )
     debounce_seconds: int = Field(
         default=30,
         ge=1,

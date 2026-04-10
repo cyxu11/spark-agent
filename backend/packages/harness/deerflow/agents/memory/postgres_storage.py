@@ -58,6 +58,8 @@ class PostgresMemoryStorage(MemoryStorage):
         self._cache[key] = data
         return data
     def save(self, memory_data: dict[str, Any], agent_name: str | None = None) -> bool:
+        import time
+        memory_data["lastUpdated"] = time.time()
         key = self._resolve_agent_name(agent_name)
         try:
             self._execute(

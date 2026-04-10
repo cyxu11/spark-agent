@@ -1,6 +1,7 @@
 """Memory storage providers."""
 
 import abc
+import importlib
 import json
 import logging
 import threading
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from deerflow.config.agents_config import AGENT_NAME_PATTERN
+from deerflow.config.checkpointer_config import get_checkpointer_config
 from deerflow.config.memory_config import get_memory_config
 from deerflow.config.paths import get_paths
 
@@ -162,6 +164,40 @@ _storage_instance: MemoryStorage | None = None
 _storage_lock = threading.Lock()
 
 
+def _import_storage_class(class_path: str):
+    """Import a storage class by dotted path. Extracted for testability."""
+    module_path, class_name = class_path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, class_name)
+
+
+def _resolve_connection_string(config) -> str | None:
+    """Return Postgres DSN: memory config takes precedence, then checkpointer."""
+    if config.connection_string:
+        return config.connection_string
+    try:
+        cp = get_checkpointer_config()
+        if cp is not None and cp.type == "postgres" and cp.connection_string:
+            return cp.connection_string
+    except Exception:
+        pass
+    return None
+
+
+def _build_storage_kwargs(cls, config) -> dict:
+    """Build constructor kwargs for the given storage class."""
+    if cls.__name__ == "PostgresMemoryStorage":
+        dsn = _resolve_connection_string(config)
+        if not dsn:
+            raise ValueError(
+                "PostgresMemoryStorage requires a connection_string. "
+                "Set memory.connection_string in config.yaml, "
+                "or configure checkpointer.type=postgres with a connection_string."
+            )
+        return {"connection_string": dsn}
+    return {}
+
+
 def get_memory_storage() -> MemoryStorage:
     """Get the configured memory storage instance."""
     global _storage_instance
@@ -176,11 +212,7 @@ def get_memory_storage() -> MemoryStorage:
         storage_class_path = config.storage_class
 
         try:
-            module_path, class_name = storage_class_path.rsplit(".", 1)
-            import importlib
-
-            module = importlib.import_module(module_path)
-            storage_class = getattr(module, class_name)
+            storage_class = _import_storage_class(storage_class_path)
 
             # Validate that the configured storage is a MemoryStorage implementation
             if not isinstance(storage_class, type):
@@ -188,7 +220,8 @@ def get_memory_storage() -> MemoryStorage:
             if not issubclass(storage_class, MemoryStorage):
                 raise TypeError(f"Configured memory storage '{storage_class_path}' is not a subclass of MemoryStorage")
 
-            _storage_instance = storage_class()
+            storage_kwargs = _build_storage_kwargs(storage_class, config)
+            _storage_instance = storage_class(**storage_kwargs)
         except Exception as e:
             logger.error(
                 "Failed to load memory storage %s, falling back to FileMemoryStorage: %s",
