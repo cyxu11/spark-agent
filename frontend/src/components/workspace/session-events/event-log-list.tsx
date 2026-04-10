@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { type RunEvent } from "@/core/run-events/types";
 
 import { EventItem } from "./event-item";
+import { mergeMessageEvents } from "./merge-events";
 
 interface EventLogListProps {
   events: RunEvent[];
@@ -15,6 +15,7 @@ interface EventLogListProps {
 
 export function EventLogList({ events, isLoading, isLive }: EventLogListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isLive) {
@@ -38,14 +39,16 @@ export function EventLogList({ events, isLoading, isLive }: EventLogListProps) {
     );
   }
 
+  const processed = mergeMessageEvents(events);
+
   return (
-    <ScrollArea className="h-full">
+    <div ref={scrollRef} className="h-full overflow-auto">
       <div className="divide-y divide-border/50">
-        {events.map((ev) => (
+        {processed.map((ev) => (
           <EventItem key={ev.id} event={ev} />
         ))}
       </div>
       <div ref={bottomRef} />
-    </ScrollArea>
+    </div>
   );
 }
