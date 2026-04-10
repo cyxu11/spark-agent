@@ -24,6 +24,23 @@ from .base import StreamBridge
 logger = logging.getLogger(__name__)
 
 
+def _maybe_wrap_with_logging(bridge: StreamBridge) -> StreamBridge:
+    """Wrap bridge with LoggingStreamBridge if event_log is configured and enabled."""
+    from deerflow.config.event_log_config import get_event_log_config
+    event_log_cfg = get_event_log_config()
+    if event_log_cfg and event_log_cfg.enabled:
+        from deerflow.runtime.event_log.postgres import PostgresEventLog
+        from deerflow.runtime.stream_bridge.logging_bridge import LoggingStreamBridge
+        event_log = PostgresEventLog(connection_string=event_log_cfg.connection_string)
+        bridge = LoggingStreamBridge(
+            inner=bridge,
+            event_log=event_log,
+            run_registry=lambda run_id: None,  # placeholder; updated in deps.py
+        )
+        logger.info("Stream bridge wrapped with LoggingStreamBridge (event log enabled)")
+    return bridge
+
+
 @contextlib.asynccontextmanager
 async def make_stream_bridge(config=None) -> AsyncIterator[StreamBridge]:
     """Async context manager that yields a :class:`StreamBridge`.
@@ -40,6 +57,7 @@ async def make_stream_bridge(config=None) -> AsyncIterator[StreamBridge]:
         maxsize = config.queue_maxsize if config is not None else 256
         bridge = MemoryStreamBridge(queue_maxsize=maxsize)
         logger.info("Stream bridge initialised: memory (queue_maxsize=%d)", maxsize)
+        bridge = _maybe_wrap_with_logging(bridge)
         try:
             yield bridge
         finally:
@@ -59,6 +77,7 @@ async def make_stream_bridge(config=None) -> AsyncIterator[StreamBridge]:
         redis_client = AsyncRedis.from_url(config.redis_url)
         bridge = RedisStreamBridge(redis=redis_client)
         logger.info("Stream bridge initialised: redis (%s)", config.redis_url)
+        bridge = _maybe_wrap_with_logging(bridge)
         try:
             yield bridge
         finally:
@@ -87,6 +106,7 @@ async def make_stream_bridge(config=None) -> AsyncIterator[StreamBridge]:
             config.sentinel_master,
             config.sentinel_hosts,
         )
+        bridge = _maybe_wrap_with_logging(bridge)
         try:
             yield bridge
         finally:

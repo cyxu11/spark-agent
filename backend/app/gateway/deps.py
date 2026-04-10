@@ -33,6 +33,19 @@ async def langgraph_runtime(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.checkpointer = await stack.enter_async_context(make_checkpointer())
         app.state.store = await stack.enter_async_context(make_store())
         app.state.run_manager = RunManager()
+
+        # Wire run_registry into LoggingStreamBridge if present
+        from deerflow.runtime.stream_bridge.logging_bridge import LoggingStreamBridge
+        if isinstance(app.state.stream_bridge, LoggingStreamBridge):
+            run_mgr = app.state.run_manager
+            def _get_thread_id(run_id: str) -> str | None:
+                rec = run_mgr._runs.get(run_id)
+                return rec.thread_id if rec else None
+            app.state.stream_bridge.set_run_registry(_get_thread_id)
+            app.state.event_log = app.state.stream_bridge._log
+        else:
+            app.state.event_log = None
+
         yield
 
 
@@ -68,3 +81,8 @@ def get_checkpointer(request: Request):
 def get_store(request: Request):
     """Return the global store (may be ``None`` if not configured)."""
     return getattr(request.app.state, "store", None)
+
+
+def get_event_log(request: Request):
+    """Return the PostgresEventLog if configured, else None."""
+    return getattr(request.app.state, "event_log", None)
