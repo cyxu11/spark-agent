@@ -1,0 +1,256 @@
+# 集群部署与分布式存储升级设计
+**日期：** 2026-04-08  
+**目标：** 支持 400 人并发在线，双节点集群部署，本地存储替换为分布式中间件
+---
+## 背景与问题
+当前部署为单节点，所有状态存储依赖本地：
+- **LangGraph Checkpointer** — SQLite 文件，单进程独占锁，无法多节点共享
+- **StreamBridge** — 进程内 `MemoryStreamBridge`，跨节点 SSE 断线重连会丢失事件流
+- **文件上传** — 本地文件系统 `.deer-flow/`，另一节点无法访问
+- **Memory Storage** — 本地 JSON 文件，同上
+400 人并发场景下，单节点无法水平扩展，任意节点故障导致全站不可用。
+---
+## 约束与决策
+| 问题 | 决策 |
+|------|------|
+| 用户数据隔离 | 完全隔离，每个用户只看到自己的数据 |
+| 文件存储 | MinIO 对象存储 |
+| 部署方式 | Docker Compose 双节点 + 前置 Nginx LB |
+| 中间件部署位置 | 节点 A 同机运行（省机器，接受单点风险） |
+---
+## 目标架构
+```
+外部流量
+    │
+    ▼
+前置 Nginx LB（节点A上）
+  least_conn 轮询
+    │
+  ┌─┴──────────┐
+  ▼            ▼
+节点 A         节点 B
+(Docker        (Docker
+Compose)       Compose)
+frontend       frontend
+gateway        gateway
+langgraph      langgraph
+nginx          nginx
+    │
+    └──────── 节点 A 同机中间件 ────────┐
+                                       ▼
+                              PostgreSQL 5432
+                              Redis       6379
+                              MinIO       9000/9001
+```
+节点 A/B 应用进程完全无状态，任意节点重启不丢失用户数据，前置 Nginx 使用 `least_conn`，不需要 IP Hash 或会话粘滞。
+---
+## 存储层改造详情
+### 1. Checkpointer + Store → PostgreSQL
+代码已完整实现 PostgreSQL 路径，**零代码改动，仅修改配置**。
+```yaml
+# config.yaml
+checkpointer:
+  type: postgres
+  connection_string: $POSTGRES_DSN
+```
+### 2. StreamBridge → Redis Streams
+现有 `async_provider.py` 中 Redis 分支标注为 `NotImplementedError("Phase 2")`，需实现。
+新增文件：`backend/packages/harness/deerflow/runtime/stream_bridge/redis.py`
+实现 `StreamBridge` 抽象接口的 4 个方法：
+| 方法 | Redis 实现 |
+|------|-----------|
+| `publish` | `XADD {run_id} * event … data …` |
+| `publish_end` | `XADD {run_id} * event __end__` |
+| `subscribe` | `XREAD BLOCK` 轮询，支持 `Last-Event-ID` 断点续传 |
+| `cleanup` | `DEL {run_id}`（支持 delay） |
+降级策略：Redis 不可达时自动降级为 `MemoryStreamBridge`，打 ERROR 日志告警。
+```yaml
+# config.yaml
+stream_bridge:
+  type: redis
+  redis_url: $REDIS_URL
+  queue_maxsize: 256
+```
+估算工作量：~150 行新代码。
+### 3. 文件上传 → MinIO
+现有 `uploads/manager.py` 直接操作本地文件系统，需抽象上传后端。
+新增目录结构：
+```
+backend/packages/harness/deerflow/uploads/
+  manager.py          ← 现有业务逻辑保留（路径校验等）
+  backends/
+    base.py           ← 抽象接口：save / load / delete / get_url
+    local.py          ← 现有逻辑迁入
+    minio.py          ← 新增 MinIO 实现（minio-py SDK）
+```
+```yaml
+# config.yaml
+uploads:
+  backend: minio
+  minio:
+    endpoint: $MINIO_ENDPOINT
+    access_key: $MINIO_ACCESS_KEY
+    secret_key: $MINIO_SECRET_KEY
+    bucket: deerflow-uploads
+    secure: false
+```
+估算工作量：~100 行新代码 + 重构 manager.py。
+### 4. Memory Storage → PostgreSQL
+新增 `PostgresMemoryStorage` 实现 `MemoryStorage` 抽象，数据存入 `agent_memory` 表，与 checkpointer 共用同一数据库连接配置。
+估算工作量：~80 行新代码。
+---
+## Docker Compose 部署结构
+### 新增文件
+```
+docker/
+  docker-compose.yaml              ← 现有（应用节点，小改）
+  docker-compose.middleware.yaml   ← 新增（中间件）
+  docker-compose.lb.yaml           ← 新增（前置LB）
+  nginx/
+    nginx.conf                     ← 现有（应用内nginx，不动）
+    lb.conf                        ← 新增（前置LB配置）
+  middleware/
+    init-postgres.sql              ← 新增（建库建用户）
+    minio-init.sh                  ← 新增（创建bucket）
+```
+### `docker-compose.middleware.yaml`
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: deerflow
+      POSTGRES_USER: deerflow
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./middleware/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deerflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: $MINIO_SECRET_KEY
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+```
+### 节点 A/B `docker-compose.yaml` 新增环境变量
+gateway 和 langgraph 服务增加：
+```yaml
+environment:
+  - POSTGRES_DSN=postgresql://deerflow:${POSTGRES_PASSWORD}@node-c:5432/deerflow
+  - REDIS_URL=redis://node-c:6379/0
+  - MINIO_ENDPOINT=node-c:9000
+  - MINIO_ACCESS_KEY=minioadmin
+  - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+depends_on:
+  postgres:
+    condition: service_healthy
+```
+### 前置 Nginx LB `nginx/lb.conf`
+```nginx
+upstream deerflow_nodes {
+    least_conn;
+    server node-a:2026;
+    server node-b:2026;
+    keepalive 32;
+}
+server {
+    listen 80;
+    location / {
+        proxy_pass http://deerflow_nodes;
+        proxy_http_version 1.1;
+        proxy_buffering off;      # SSE 必须关闭，否则事件流会被缓冲
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_set_header Connection '';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+### 启动顺序
+```bash
+# 1. 节点A/C：启动中间件
+docker compose -f docker-compose.middleware.yaml up -d
+# 2. 等待中间件健康（约30秒）
+docker compose -f docker-compose.middleware.yaml ps
+# 3. 节点A、节点B：各自启动应用
+docker compose up -d
+# 4. 节点A：启动前置LB
+docker compose -f docker-compose.lb.yaml up -d
+```
+---
+## 数据迁移策略
+**原则：存量数据不迁，增量走新路径。**
+| 数据类型 | 处理方式 | 工具 |
+|---------|---------|------|
+| SQLite checkpoints | 不迁移，历史对话让用户重开 | — |
+| 本地上传文件 | 一次性脚本迁移到 MinIO | `mc mirror` |
+| Memory JSON 文件 | 一次性脚本导入 PostgreSQL | 自定义迁移脚本 |
+迁移脚本纳入版本控制，放在 `scripts/migrate-to-cluster.sh`，切换当天运维执行一次。
+---
+## 错误处理
+| 中间件 | 故障行为 | 降级策略 |
+|--------|---------|---------|
+| PostgreSQL | 连接断开 | 连接池自动重试，服务不可用返回 503 |
+| Redis | 连接失败 | 自动降级为 MemoryStreamBridge，打 ERROR 日志 |
+| MinIO | 连接失败 | 文件上传返回 503，不影响对话主流程 |
+---
+## 回滚策略
+**第一步（5 分钟）：** 将 `config.yaml` 中 checkpointer 改回 sqlite、stream_bridge 改回 memory，重启容器，回到单节点模式。
+**第二步（观察1周后）：** 确认稳定运行后，决定是否关停中间件容器。
+---
+## 监控建议
+在节点 A 部署 Uptime Kuma（Docker 一键启动）监控三个中间件健康端点：
+| 中间件 | 健康检查 |
+|--------|---------|
+| PostgreSQL | `pg_isready -U deerflow` |
+| Redis | `redis-cli ping` |
+| MinIO | `GET http://node-c:9000/minio/health/live` |
+---
+## 改动量汇总
+| 改动项 | 类型 | 估算工作量 |
+|--------|------|-----------|
+| Checkpointer + Store → PostgreSQL | 纯配置 | 极小 |
+| `RedisStreamBridge` 实现 | 新增代码 | 中（~150行） |
+| MinIO 上传后端 | 新增代码 + 重构 | 中（~100行） |
+| `PostgresMemoryStorage` | 新增代码 | 小（~80行） |
+| `docker-compose.middleware.yaml` | 新增配置 | 小 |
+| `docker-compose.lb.yaml` + lb.conf | 新增配置 | 极小 |
+| 数据迁移脚本 | 脚本 | 小 |
+| **合计** | | **~330行代码 + 配置** |
