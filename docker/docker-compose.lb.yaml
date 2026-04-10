@@ -1,0 +1,9 @@
+services:
+  lb:
+    image: nginx:alpine
+    container_name: deer-flow-lb
+    ports:
+      - "${LB_PORT:-80}:80"
+    volumes:
+      - ./nginx/lb.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
