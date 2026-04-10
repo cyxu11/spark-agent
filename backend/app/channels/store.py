@@ -151,3 +151,7 @@ class ChannelStore:
                 item["topic_id"] = topic
             results.append(item)
         return results
+
+
+# Backward-compatible alias; new code should use PostgresChannelStore for multi-node.
+FileChannelStore = ChannelStore

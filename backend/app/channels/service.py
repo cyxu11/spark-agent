@@ -13,6 +13,21 @@ from app.channels.store import ChannelStore
 
 logger = logging.getLogger(__name__)
 
+
+def _create_channel_store():
+    """Return PostgresChannelStore when checkpointer uses postgres, else FileChannelStore."""
+    try:
+        from deerflow.config.checkpointer_config import get_checkpointer_config
+        cp = get_checkpointer_config()
+        if cp is not None and cp.type == "postgres" and cp.connection_string:
+            from app.channels.postgres_store import PostgresChannelStore
+            logger.info("ChannelStore: using PostgresChannelStore")
+            return PostgresChannelStore(connection_string=cp.connection_string)
+    except Exception as e:
+        logger.warning("Could not initialize PostgresChannelStore, falling back: %s", e)
+    from app.channels.store import ChannelStore
+    return ChannelStore()
+
 # Channel name → import path for lazy loading
 _CHANNEL_REGISTRY: dict[str, str] = {
     "feishu": "app.channels.feishu:FeishuChannel",
@@ -44,7 +59,7 @@ class ChannelService:
 
     def __init__(self, channels_config: dict[str, Any] | None = None) -> None:
         self.bus = MessageBus()
-        self.store = ChannelStore()
+        self.store = _create_channel_store()
         config = dict(channels_config or {})
         langgraph_url = _resolve_service_url(config, "langgraph_url", _CHANNELS_LANGGRAPH_URL_ENV, DEFAULT_LANGGRAPH_URL)
         gateway_url = _resolve_service_url(config, "gateway_url", _CHANNELS_GATEWAY_URL_ENV, DEFAULT_GATEWAY_URL)
