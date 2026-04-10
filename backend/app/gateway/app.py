@@ -14,6 +14,7 @@ from app.gateway.routers import (
     mcp,
     memory,
     models,
+    run_events,
     runs,
     skills,
     suggestions,
@@ -160,6 +161,10 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
                 "name": "health",
                 "description": "Health check and system status endpoints",
             },
+            {
+                "name": "run-events",
+                "description": "Query and stream persisted SSE events for runs and threads",
+            },
         ],
     )
 
@@ -204,6 +209,9 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
 
     # Stateless Runs API (stream/wait without a pre-existing thread)
     app.include_router(runs.router)
+
+    # Run Events API
+    app.include_router(run_events.router)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict:
