@@ -224,6 +224,13 @@ async def delete_thread_data(thread_id: str, request: Request) -> ThreadDeleteRe
     # Clean local filesystem
     response = _delete_thread_data(thread_id)
 
+    # Clean outputs backend (MinIO) — best-effort
+    try:
+        from deerflow.outputs.provider import get_outputs_backend
+        await get_outputs_backend().delete_thread(thread_id)
+    except Exception:
+        logger.debug("Could not delete outputs backend data for thread %s (non-critical)", thread_id)
+
     # Remove from Store (best-effort)
     store = get_store(request)
     if store is not None:

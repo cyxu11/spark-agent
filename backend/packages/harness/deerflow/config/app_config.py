@@ -18,6 +18,7 @@ from deerflow.config.sandbox_config import SandboxConfig
 from deerflow.config.skill_evolution_config import SkillEvolutionConfig
 from deerflow.config.skills_config import SkillsConfig
 from deerflow.config.stream_bridge_config import StreamBridgeConfig, load_stream_bridge_config_from_dict
+from deerflow.config.outputs_config import OutputsConfig
 from deerflow.config.uploads_config import UploadsConfig, load_uploads_config_from_dict
 from deerflow.config.subagents_config import SubagentsAppConfig, load_subagents_config_from_dict
 from deerflow.config.summarization_config import SummarizationConfig, load_summarization_config_from_dict
@@ -60,6 +61,7 @@ class AppConfig(BaseModel):
     checkpointer: CheckpointerConfig | None = Field(default=None, description="Checkpointer configuration")
     stream_bridge: StreamBridgeConfig | None = Field(default=None, description="Stream bridge configuration")
     uploads: UploadsConfig = Field(default_factory=UploadsConfig, description="File upload backend configuration")
+    outputs: OutputsConfig = Field(default_factory=OutputsConfig, description="Outputs storage backend configuration")
 
     @classmethod
     def resolve_config_path(cls, config_path: str | None = None) -> Path:

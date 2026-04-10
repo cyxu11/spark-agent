@@ -1,5 +1,5 @@
+import asyncio
 import logging
-import mimetypes
 from pathlib import Path
 from typing import Annotated
 
@@ -10,16 +10,10 @@ from langgraph.typing import ContextT
 
 from deerflow.agents.thread_state import ThreadState
 from deerflow.config.paths import VIRTUAL_PATH_PREFIX, get_paths
-from deerflow.config.uploads_config import get_uploads_config
 
 OUTPUTS_VIRTUAL_PREFIX = f"{VIRTUAL_PATH_PREFIX}/outputs"
 
 logger = logging.getLogger(__name__)
-
-try:
-    from deerflow.uploads.backends.minio import MinioUploadBackend
-except ImportError:
-    MinioUploadBackend = None  # type: ignore[assignment,misc]
 
 
 def _normalize_presented_filepath(
@@ -69,28 +63,18 @@ def _normalize_presented_filepath(
     return f"{OUTPUTS_VIRTUAL_PREFIX}/{relative_path.as_posix()}"
 
 
-def _sync_to_minio(thread_id: str, virtual_path: str, physical_path: Path) -> None:
-    """Upload a single output file to MinIO. Non-fatal on error."""
-    uploads_cfg = get_uploads_config()
-    if uploads_cfg.backend != "minio" or not uploads_cfg.minio:
-        return
-
+def _upload_to_outputs_backend(thread_id: str, virtual_path: str, physical_path: Path) -> None:
+    """Upload a single output file to the configured outputs backend. Non-fatal on error."""
+    from deerflow.outputs.provider import get_outputs_backend
+    backend = get_outputs_backend()
+    coro = backend.upload(thread_id, virtual_path, physical_path)
     try:
-        backend = MinioUploadBackend(
-            endpoint=uploads_cfg.minio.endpoint,
-            access_key=uploads_cfg.minio.access_key,
-            secret_key=uploads_cfg.minio.secret_key,
-            bucket=uploads_cfg.minio.bucket,
-            secure=uploads_cfg.minio.secure,
-        )
-        # Strip "/mnt/user-data/" prefix → "outputs/filename.ext"
-        prefix = VIRTUAL_PATH_PREFIX.lstrip("/") + "/"
-        relative = virtual_path.lstrip("/")[len(prefix):]
-        content_type = mimetypes.guess_type(physical_path.name)[0] or "application/octet-stream"
-        backend.save(thread_id, relative, physical_path.read_bytes(), content_type=content_type)
-        logger.info("Synced output to MinIO: %s/%s", thread_id, relative)
+        loop = asyncio.get_running_loop()
+        loop.create_task(coro)
+    except RuntimeError:
+        asyncio.run(coro)
     except Exception:
-        logger.warning("MinIO sync failed for %s (non-fatal)", virtual_path, exc_info=True)
+        logger.warning("Output upload failed for %s (non-fatal)", virtual_path, exc_info=True)
 
 
 @tool("present_files", parse_docstring=True)
@@ -140,7 +124,7 @@ def present_file_tool(
                     physical = Path(original_filepath).expanduser().resolve()
                 if not physical.is_absolute():
                     physical = outputs_dir / physical
-                _sync_to_minio(thread_id, virtual_path, physical)
+                _upload_to_outputs_backend(thread_id, virtual_path, physical)
 
     # The merge_artifacts reducer will handle merging and deduplication
     return Command(

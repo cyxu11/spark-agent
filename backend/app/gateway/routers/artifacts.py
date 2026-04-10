@@ -152,6 +152,16 @@ async def get_artifact(thread_id: str, path: str, request: Request, download: bo
         except UnicodeDecodeError:
             return Response(content=content, media_type=mime_type or "application/octet-stream", headers=cache_headers)
 
+    # For outputs paths, try the configured backend first (enables MinIO multi-node serving)
+    virtual_path = path if path.startswith("/") else f"/{path}"
+    if virtual_path.startswith("/mnt/user-data/outputs/"):
+        from deerflow.outputs.provider import get_outputs_backend
+        backend = get_outputs_backend()
+        try:
+            return await backend.get_response(thread_id, virtual_path)
+        except Exception:
+            pass  # fallback to local file
+
     actual_path = resolve_thread_virtual_path(thread_id, path)
 
     logger.info(f"Resolving artifact path: thread_id={thread_id}, requested_path={path}, actual_path={actual_path}")
