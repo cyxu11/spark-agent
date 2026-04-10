@@ -25,3 +25,7 @@ class LocalOutputsBackend(OutputsBackend):
     async def delete_thread(self, thread_id: str) -> None:
         # Thread dir cleanup is handled by paths.delete_thread_dir elsewhere.
         pass
+
+    async def sync_directory(self, thread_id: str, local_dir: Path, subdir: str) -> None:
+        # No-op for local backend; files are already on disk.
+        pass

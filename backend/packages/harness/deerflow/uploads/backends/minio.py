@@ -28,7 +28,7 @@ class MinioUploadBackend(UploadBackend):
             self._client.make_bucket(self._bucket)
             logger.info("MinIO: created bucket %s", self._bucket)
     def _object_name(self, thread_id: str, filename: str) -> str:
-        return f"{thread_id}/{filename}"
+        return f"{thread_id}/uploads/{filename}"
     def save(self, thread_id: str, filename: str, data: bytes, *, content_type: str = "application/octet-stream") -> None:
         name = self._object_name(thread_id, filename)
         self._client.put_object(
@@ -51,5 +51,6 @@ class MinioUploadBackend(UploadBackend):
             self._bucket, name, expires=timedelta(seconds=expires)
         )
     def list_files(self, thread_id: str) -> list[str]:
-        objects = self._client.list_objects(self._bucket, prefix=f"{thread_id}/")
-        return [obj.object_name.split("/", 1)[1] for obj in objects]
+        prefix = f"{thread_id}/uploads/"
+        objects = self._client.list_objects(self._bucket, prefix=prefix)
+        return [obj.object_name[len(prefix):] for obj in objects]

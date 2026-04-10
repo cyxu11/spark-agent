@@ -1,5 +1,6 @@
 """Upload router for handling file uploads."""
 
+import asyncio
 import logging
 import os
 import stat
@@ -116,8 +117,8 @@ async def upload_files(
                 import mimetypes
 
                 content_type = mimetypes.guess_type(safe_filename)[0] or "application/octet-stream"
-                minio_backend.save(thread_id, safe_filename, content, content_type=content_type)
-                logger.info(f"Uploaded file to MinIO: {thread_id}/{safe_filename}")
+                await asyncio.to_thread(minio_backend.save, thread_id, safe_filename, content, content_type=content_type)
+                logger.info(f"Uploaded file to MinIO: {thread_id}/uploads/{safe_filename}")
 
             file_info = {
                 "filename": safe_filename,
@@ -141,8 +142,8 @@ async def upload_files(
                         sandbox.update_file(md_virtual_path, md_bytes)
 
                     if minio_backend is not None:
-                        minio_backend.save(thread_id, md_path.name, md_bytes, content_type="text/markdown")
-                        logger.info(f"Uploaded converted markdown to MinIO: {thread_id}/{md_path.name}")
+                        await asyncio.to_thread(minio_backend.save, thread_id, md_path.name, md_bytes, content_type="text/markdown")
+                        logger.info(f"Uploaded converted markdown to MinIO: {thread_id}/uploads/{md_path.name}")
 
                     file_info["markdown_file"] = md_path.name
                     file_info["markdown_path"] = str(sandbox_uploads / md_path.name)

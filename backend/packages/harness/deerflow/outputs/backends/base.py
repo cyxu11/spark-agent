@@ -18,9 +18,21 @@ class OutputsBackend(abc.ABC):
     async def delete_thread(self, thread_id: str) -> None:
         """Remove all outputs for a thread (called on thread deletion)."""
 
+    @abc.abstractmethod
+    async def sync_directory(self, thread_id: str, local_dir: Path, subdir: str) -> None:
+        """Sync all files in local_dir to storage under {thread_id}/{subdir}/."""
+
     @staticmethod
     def _object_key(thread_id: str, virtual_path: str) -> str:
-        """Derive a stable MinIO object key from thread_id + virtual_path."""
-        # e.g. "outputs/tid-abc123/report.pdf"
-        filename = virtual_path.lstrip("/").split("/")[-1]
-        return f"outputs/{thread_id}/{filename}"
+        """Derive MinIO key: {thread_id}/{subdir}/{relative_path}
+
+        /mnt/user-data/outputs/file.xlsx   → {thread_id}/outputs/file.xlsx
+        /mnt/user-data/workspace/script.py → {thread_id}/workspace/script.py
+        """
+        prefix = "/mnt/user-data/"
+        if virtual_path.startswith(prefix):
+            relative = virtual_path[len(prefix):]
+        else:
+            filename = virtual_path.lstrip("/").split("/")[-1]
+            relative = f"outputs/{filename}"
+        return f"{thread_id}/{relative}"

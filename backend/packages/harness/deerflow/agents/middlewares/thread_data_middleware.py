@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from pathlib import Path
 from typing import NotRequired, override
 
 from langchain.agents import AgentState
@@ -97,3 +99,47 @@ class ThreadDataMiddleware(AgentMiddleware[ThreadDataMiddlewareState]):
                 **paths,
             }
         }
+
+    @override
+    def after_agent(self, state: ThreadDataMiddlewareState, runtime: Runtime) -> dict | None:
+        thread_data = state.get("thread_data")
+        if thread_data is None:
+            return None
+        workspace_path_str = thread_data.get("workspace_path") if isinstance(thread_data, dict) else getattr(thread_data, "workspace_path", None)
+        if not workspace_path_str:
+            return None
+        context = runtime.context or {}
+        thread_id = context.get("thread_id")
+        if thread_id is None:
+            config = get_config()
+            thread_id = config.get("configurable", {}).get("thread_id")
+        if thread_id is None:
+            return None
+        workspace_path = Path(workspace_path_str)
+        _schedule_workspace_sync(thread_id, workspace_path)
+        return None
+
+
+def _schedule_workspace_sync(thread_id: str, workspace_path: Path) -> None:
+    """Fire-and-forget: sync workspace directory to outputs backend after agent run."""
+    try:
+        from deerflow.outputs.provider import get_outputs_backend
+
+        async def _do_sync() -> None:
+            try:
+                backend = get_outputs_backend()
+                await backend.sync_directory(thread_id, workspace_path, "workspace")
+                logger.debug("Workspace synced to storage for thread %s", thread_id)
+            except Exception as exc:
+                logger.warning("Workspace sync failed for thread %s: %s", thread_id, exc)
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(_do_sync())
+            else:
+                asyncio.run(_do_sync())
+        except RuntimeError:
+            asyncio.run(_do_sync())
+    except Exception as exc:
+        logger.warning("Failed to schedule workspace sync for thread %s: %s", thread_id, exc)
