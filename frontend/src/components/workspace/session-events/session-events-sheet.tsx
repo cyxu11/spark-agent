@@ -1,7 +1,7 @@
 "use client";
 
 import { ActivityIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,12 @@ export function SessionEventsSheet({ threadId, runs }: SessionEventsSheetProps) 
   const [selectedRunId, setSelectedRunId] = useState<string | null>(
     latestRun?.run_id ?? null,
   );
+
+  useEffect(() => {
+    const latest = runs[runs.length - 1]?.run_id ?? null;
+    if (latest) setSelectedRunId(latest);
+  }, [runs]);
+
   const isLive = runs.find((r) => r.run_id === selectedRunId)?.is_live ?? false;
   const { events, isLoading } = useEventLog(threadId, selectedRunId, isLive);
 
