@@ -26,6 +26,7 @@ from deerflow.config.title_config import TitleConfig, load_title_config_from_dic
 from deerflow.config.token_usage_config import TokenUsageConfig
 from deerflow.config.tool_config import ToolConfig, ToolGroupConfig
 from deerflow.config.tool_search_config import ToolSearchConfig, load_tool_search_config_from_dict
+from deerflow.config.event_log_config import EventLogConfig, load_event_log_config_from_dict
 
 load_dotenv()
 
@@ -62,6 +63,7 @@ class AppConfig(BaseModel):
     stream_bridge: StreamBridgeConfig | None = Field(default=None, description="Stream bridge configuration")
     uploads: UploadsConfig = Field(default_factory=UploadsConfig, description="File upload backend configuration")
     outputs: OutputsConfig = Field(default_factory=OutputsConfig, description="Outputs storage backend configuration")
+    event_log: EventLogConfig | None = Field(default=None, description="Run event log persistence configuration.")
 
     @classmethod
     def resolve_config_path(cls, config_path: str | None = None) -> Path:
@@ -144,6 +146,10 @@ class AppConfig(BaseModel):
         # Load uploads config if present
         if "uploads" in config_data:
             load_uploads_config_from_dict(config_data["uploads"])
+
+        # Load event_log config if present
+        if "event_log" in config_data:
+            load_event_log_config_from_dict(config_data["event_log"])
 
         # Always refresh ACP agent config so removed entries do not linger across reloads.
         load_acp_config_from_dict(config_data.get("acp_agents", {}))
