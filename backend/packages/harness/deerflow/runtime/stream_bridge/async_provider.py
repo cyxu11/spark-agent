@@ -65,4 +65,32 @@ async def make_stream_bridge(config=None) -> AsyncIterator[StreamBridge]:
             await bridge.close()
         return
 
+    if config.type == "redis-sentinel":
+        if not config.sentinel_hosts:
+            raise ValueError("stream_bridge.sentinel_hosts is required for redis-sentinel type")
+        try:
+            from redis.asyncio.sentinel import Sentinel
+        except ImportError as exc:
+            raise ImportError(
+                "Install redis: uv add 'redis[hiredis]'"
+            ) from exc
+        from deerflow.runtime.stream_bridge.redis import RedisStreamBridge
+        sentinel_nodes = []
+        for host_port in config.sentinel_hosts:
+            host, _, port = host_port.rpartition(":")
+            sentinel_nodes.append((host, int(port)))
+        sentinel = Sentinel(sentinel_nodes, socket_timeout=0.5)
+        redis_client = sentinel.master_for(config.sentinel_master, socket_timeout=0.5)
+        bridge = RedisStreamBridge(redis=redis_client)
+        logger.info(
+            "Stream bridge initialised: redis-sentinel (master=%s, sentinels=%s)",
+            config.sentinel_master,
+            config.sentinel_hosts,
+        )
+        try:
+            yield bridge
+        finally:
+            await bridge.close()
+        return
+
     raise ValueError(f"Unknown stream bridge type: {config.type!r}")

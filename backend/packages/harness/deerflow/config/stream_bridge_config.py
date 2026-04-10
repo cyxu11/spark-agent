@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-StreamBridgeType = Literal["memory", "redis"]
+StreamBridgeType = Literal["memory", "redis", "redis-sentinel"]
 
 
 class StreamBridgeConfig(BaseModel):
@@ -12,11 +12,19 @@ class StreamBridgeConfig(BaseModel):
 
     type: StreamBridgeType = Field(
         default="memory",
-        description="Stream bridge backend type. 'memory' uses in-process asyncio.Queue (single-process only). 'redis' uses Redis Streams (planned for Phase 2, not yet implemented).",
+        description="Stream bridge backend type. 'memory' uses in-process asyncio.Queue (single-process only). 'redis' uses Redis Streams (single node). 'redis-sentinel' uses Redis Sentinel for HA cluster.",
     )
     redis_url: str | None = Field(
         default=None,
-        description="Redis URL for the redis stream bridge type. Example: 'redis://localhost:6379/0'.",
+        description="Redis URL for the redis type. Example: 'redis://localhost:6379/0'.",
+    )
+    sentinel_hosts: list[str] = Field(
+        default_factory=list,
+        description="Sentinel node addresses for redis-sentinel type. Example: ['sentinel-1:26379', 'sentinel-2:26379'].",
+    )
+    sentinel_master: str = Field(
+        default="mymaster",
+        description="Sentinel master name for redis-sentinel type.",
     )
     queue_maxsize: int = Field(
         default=256,

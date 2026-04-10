@@ -17,6 +17,8 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Redis 单节点模式（默认）─────────────────────────────────────────────────
+  # 启动: docker compose -f docker-compose.middleware.yaml up -d
   redis:
     image: redis:7-alpine
     command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
@@ -30,6 +32,83 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # ── Redis 哨兵模式（HA，可选）──────────────────────────────────────────────
+  # 启动: docker compose -f docker-compose.middleware.yaml --profile sentinel up -d
+  # config.yaml 对应改为: stream_bridge.type: redis-sentinel
+  redis-master:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_master_data:/data
+    restart: unless-stopped
+    profiles: [sentinel]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis-replica-1:
+    image: redis:7-alpine
+    command: redis-server --replicaof redis-master 6379 --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_replica1_data:/data
+    restart: unless-stopped
+    profiles: [sentinel]
+    depends_on:
+      redis-master:
+        condition: service_healthy
+
+  redis-replica-2:
+    image: redis:7-alpine
+    command: redis-server --replicaof redis-master 6379 --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_replica2_data:/data
+    restart: unless-stopped
+    profiles: [sentinel]
+    depends_on:
+      redis-master:
+        condition: service_healthy
+
+  redis-sentinel-1:
+    image: redis:7-alpine
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./middleware/sentinel.conf:/etc/redis/sentinel.conf:ro
+    ports:
+      - "26379:26379"
+    restart: unless-stopped
+    profiles: [sentinel]
+    depends_on:
+      redis-master:
+        condition: service_healthy
+
+  redis-sentinel-2:
+    image: redis:7-alpine
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./middleware/sentinel.conf:/etc/redis/sentinel.conf:ro
+    ports:
+      - "26380:26379"
+    restart: unless-stopped
+    profiles: [sentinel]
+    depends_on:
+      redis-master:
+        condition: service_healthy
+
+  redis-sentinel-3:
+    image: redis:7-alpine
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./middleware/sentinel.conf:/etc/redis/sentinel.conf:ro
+    ports:
+      - "26381:26379"
+    restart: unless-stopped
+    profiles: [sentinel]
+    depends_on:
+      redis-master:
+        condition: service_healthy
 
   minio:
     image: minio/minio
@@ -52,4 +131,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  redis_master_data:
+  redis_replica1_data:
+  redis_replica2_data:
   minio_data:
