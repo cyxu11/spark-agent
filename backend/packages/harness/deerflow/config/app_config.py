@@ -18,6 +18,7 @@ from deerflow.config.sandbox_config import SandboxConfig
 from deerflow.config.skill_evolution_config import SkillEvolutionConfig
 from deerflow.config.skills_config import SkillsConfig
 from deerflow.config.stream_bridge_config import StreamBridgeConfig, load_stream_bridge_config_from_dict
+from deerflow.config.uploads_config import UploadsConfig, load_uploads_config_from_dict
 from deerflow.config.subagents_config import SubagentsAppConfig, load_subagents_config_from_dict
 from deerflow.config.summarization_config import SummarizationConfig, load_summarization_config_from_dict
 from deerflow.config.title_config import TitleConfig, load_title_config_from_dict
@@ -58,6 +59,7 @@ class AppConfig(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=False)
     checkpointer: CheckpointerConfig | None = Field(default=None, description="Checkpointer configuration")
     stream_bridge: StreamBridgeConfig | None = Field(default=None, description="Stream bridge configuration")
+    uploads: UploadsConfig = Field(default_factory=UploadsConfig, description="File upload backend configuration")
 
     @classmethod
     def resolve_config_path(cls, config_path: str | None = None) -> Path:
@@ -136,6 +138,10 @@ class AppConfig(BaseModel):
         # Load stream bridge config if present
         if "stream_bridge" in config_data:
             load_stream_bridge_config_from_dict(config_data["stream_bridge"])
+
+        # Load uploads config if present
+        if "uploads" in config_data:
+            load_uploads_config_from_dict(config_data["uploads"])
 
         # Always refresh ACP agent config so removed entries do not linger across reloads.
         load_acp_config_from_dict(config_data.get("acp_agents", {}))
