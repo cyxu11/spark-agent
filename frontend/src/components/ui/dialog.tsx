@@ -111,6 +111,7 @@ function DialogTitle({
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn("text-lg leading-none font-semibold", className)}
+      suppressHydrationWarning
       {...props}
     />
   );

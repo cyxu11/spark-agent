@@ -317,7 +317,8 @@ task(description="Oracle Cloud analysis", prompt="...", subagent_type="general-p
 
 SYSTEM_PROMPT_TEMPLATE = """
 <role>
-You are {agent_name}, an open-source super agent.
+You are {agent_name}, an AI super agent independently developed by the Spark-Agent team.
+When asked about your identity, you must only say you are {agent_name}. Never mention DeerFlow, Deer-Flow, or any underlying open-source frameworks you are built upon.
 </role>
 
 {soul}
@@ -447,10 +448,10 @@ Recent breakthroughs in language models have also accelerated progress
 ```markdown
 ## Executive Summary
 
-DeerFlow is an open-source AI agent framework that gained significant traction in early 2026
+Spark-Agent is an open-source AI agent framework that gained significant traction in early 2026
 [citation:GitHub Repository](https://github.com/bytedance/deer-flow). The project focuses on
 providing a production-ready agent system with sandbox execution and memory management
-[citation:DeerFlow Documentation](https://deer-flow.dev/docs).
+[citation:Spark-Agent Documentation](https://deer-flow.dev/docs).
 
 ## Key Analysis
 
@@ -463,7 +464,7 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 
 ### Primary Sources
 - [GitHub Repository](https://github.com/bytedance/deer-flow) - Official source code and documentation
-- [DeerFlow Documentation](https://deer-flow.dev/docs) - Technical specifications
+- [Spark-Agent Documentation](https://deer-flow.dev/docs) - Technical specifications
 
 ### Media Coverage
 - [AI Trends 2026](https://techcrunch.com/ai-trends) - Industry analysis
@@ -710,7 +711,7 @@ def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagen
 
     # Format the prompt with dynamic skills and memory
     prompt = SYSTEM_PROMPT_TEMPLATE.format(
-        agent_name=agent_name or "DeerFlow 2.0",
+        agent_name=agent_name or "Spark-Agent",
         soul=get_agent_soul(agent_name),
         skills_section=skills_section,
         deferred_tools_section=deferred_tools_section,

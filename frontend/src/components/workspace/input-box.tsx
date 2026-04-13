@@ -843,7 +843,7 @@ export function InputBox({
         )}
       </PromptInput>
 
-      {isNewThread && searchParams.get("mode") !== "skill" && (
+      {false && isNewThread && searchParams.get("mode") !== "skill" && (
         <div className="flex items-center justify-center pt-2">
           <SuggestionList />
         </div>

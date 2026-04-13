@@ -61,11 +61,11 @@ export const enUS: Translations = {
   welcome: {
     greeting: "Hello, again!",
     description:
-      "Welcome to 🦌 DeerFlow, an open source super agent. With built-in and custom skills, DeerFlow helps you search on the web, analyze data, and generate artifacts like slides, web pages and do almost anything.",
+      "Welcome to Spark-Agent, an open source super agent. With built-in and custom skills, Spark-Agent helps you search on the web, analyze data, and generate artifacts like slides, web pages and do almost anything.",
 
     createYourOwnSkill: "Create Your Own Skill",
     createYourOwnSkillDescription:
-      "Create your own skill to release the power of DeerFlow. With customized skills,\nDeerFlow can help you search on the web, analyze data, and generate\n artifacts like slides, web pages and do almost anything.",
+      "Create your own skill to release the power of Spark-Agent. With customized skills,\nSpark-Agent can help you search on the web, analyze data, and generate\n artifacts like slides, web pages and do almost anything.",
   },
 
   // Clipboard
@@ -83,17 +83,17 @@ export const enUS: Translations = {
       "We're going to build a new skill step by step with `skill-creator`. To start, what do you want this skill to do?",
     addAttachments: "Add attachments",
     mode: "Mode",
-    flashMode: "Flash",
-    flashModeDescription: "Fast and efficient, but may not be accurate",
-    reasoningMode: "Reasoning",
+    flashMode: "交易问答",
+    flashModeDescription: "Quick answers for trading-related questions — ideal for market queries, trading rules, and instant Q&A",
+    reasoningMode: "深度思考",
     reasoningModeDescription:
-      "Reasoning before action, balance between time and accuracy",
-    proMode: "Pro",
+      "Multi-dimensional reasoning for complex questions — suited for logical judgment and in-depth investment research",
+    proMode: "深度分析",
     proModeDescription:
-      "Reasoning, planning and executing, get more accurate results, may take more time",
-    ultraMode: "Ultra",
+      "Systematically breaks down research topics with data-driven, structured conclusions — ideal for industry and company deep dives",
+    ultraMode: "研报生成",
     ultraModeDescription:
-      "Pro mode with subagents to divide work; best for complex multi-step tasks",
+      "Multi-agent collaboration to produce full research reports covering industry insights, data analysis, and investment recommendations",
     reasoningEffort: "Reasoning Effort",
     reasoningEffortMinimal: "Minimal",
     reasoningEffortMinimalDescription: "Retrieval + Direct Output",
@@ -167,11 +167,11 @@ export const enUS: Translations = {
 
   // Sidebar
   sidebar: {
-    newChat: "New chat",
-    chats: "Chats",
+    newChat: "门户",
+    chats: "历史会话",
     recentChats: "Recent chats",
     demoChats: "Demo chats",
-    agents: "Agents",
+    agents: "行业分析师",
   },
 
   // Agents
@@ -208,13 +208,13 @@ export const enUS: Translations = {
     save: "Save agent",
     saving: "Saving agent...",
     saveRequested:
-      "Save requested. DeerFlow is generating and saving an initial version now.",
+      "Save requested. Spark-Agent is generating and saving an initial version now.",
     saveHint:
       "You can save this agent at any time from the top-right menu, even if this is only a first draft.",
     saveCommandMessage:
       "Please save this custom agent now based on everything we have discussed so far. Treat this as my explicit confirmation to save. If some details are still missing, make reasonable assumptions, generate a concise first SOUL.md in English, and call setup_agent immediately without asking me for more confirmation.",
     agentCreatedPendingRefresh:
-      "The agent was created, but DeerFlow could not load it yet. Please refresh this page in a moment.",
+      "The agent was created, but Spark-Agent could not load it yet. Please refresh this page in a moment.",
     more: "More actions",
     agentCreated: "Agent created!",
     startChatting: "Start chatting",
@@ -229,13 +229,13 @@ export const enUS: Translations = {
 
   // Workspace
   workspace: {
-    officialWebsite: "DeerFlow's official website",
-    githubTooltip: "DeerFlow on Github",
+    officialWebsite: "Spark-Agent's official website",
+    githubTooltip: "Spark-Agent on Github",
     settingsAndMore: "Settings and more",
-    visitGithub: "DeerFlow on GitHub",
+    visitGithub: "Spark-Agent on GitHub",
     reportIssue: "Report a issue",
     contactUs: "Contact us",
-    about: "About DeerFlow",
+    about: "About Spark-Agent",
   },
 
   // Conversation
@@ -251,7 +251,7 @@ export const enUS: Translations = {
 
   // Page titles (document title)
   pages: {
-    appName: "DeerFlow",
+    appName: "Spark-Agent",
     chats: "Chats",
     newChat: "New chat",
     untitled: "Untitled",
@@ -277,7 +277,7 @@ export const enUS: Translations = {
     writeFile: "Write file",
     clickToViewContent: "Click to view file content",
     writeTodos: "Update to-do list",
-    skillInstallTooltip: "Install skill and make it available to DeerFlow",
+    skillInstallTooltip: "Install skill and make it available to Spark-Agent",
   },
 
   // Subtasks
@@ -310,7 +310,7 @@ export const enUS: Translations = {
     actions: "Actions",
     keyboardShortcuts: "Keyboard Shortcuts",
     keyboardShortcutsDescription:
-      "Navigate DeerFlow faster with keyboard shortcuts.",
+      "Navigate Spark-Agent faster with keyboard shortcuts.",
     openCommandPalette: "Open Command Palette",
     toggleSidebar: "Toggle Sidebar",
   },
@@ -318,7 +318,7 @@ export const enUS: Translations = {
   // Settings
   settings: {
     title: "Settings",
-    description: "Adjust how DeerFlow looks and behaves for you.",
+    description: "Adjust how Spark-Agent looks and behaves for you.",
     sections: {
       appearance: "Appearance",
       memory: "Memory",
@@ -330,7 +330,7 @@ export const enUS: Translations = {
     memory: {
       title: "Memory",
       description:
-        "DeerFlow automatically learns from your conversations in the background. These memories help DeerFlow understand you better and deliver a more personalized experience.",
+        "Spark-Agent automatically learns from your conversations in the background. These memories help Spark-Agent understand you better and deliver a more personalized experience.",
       empty: "No memory data to display.",
       rawJson: "Raw JSON",
       exportButton: "Export memory",
@@ -430,18 +430,18 @@ export const enUS: Translations = {
       createSkill: "Create skill",
       emptyTitle: "No agent skill yet",
       emptyDescription:
-        "Put your agent skill folders under the `/skills/custom` folder under the root folder of DeerFlow.",
+        "Put your agent skill folders under the `/skills/custom` folder under the root folder of Spark-Agent.",
       emptyButton: "Create Your First Skill",
     },
     notification: {
       title: "Notification",
       description:
-        "DeerFlow only sends a completion notification when the window is not active. This is especially useful for long-running tasks so you can switch to other work and get notified when done.",
+        "Spark-Agent only sends a completion notification when the window is not active. This is especially useful for long-running tasks so you can switch to other work and get notified when done.",
       requestPermission: "Request notification permission",
       deniedHint:
         "Notification permission was denied. You can enable it in your browser's site settings to receive completion alerts.",
       testButton: "Send test notification",
-      testTitle: "DeerFlow",
+      testTitle: "Spark-Agent",
       testBody: "This is a test notification.",
       notSupported: "Your browser does not support notifications.",
       disableNotification: "Disable notification",

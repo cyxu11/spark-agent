@@ -55,7 +55,10 @@ export function useEventLog(
     es.onmessage = (e: MessageEvent) => {
       try {
         const ev: RunEvent = JSON.parse(e.data as string);
-        setEvents((prev) => [...prev, ev]);
+        setEvents((prev) => {
+          if (prev.length > 0 && prev[prev.length - 1].id >= ev.id) return prev;
+          return [...prev, ev];
+        });
         afterIdRef.current = ev.id;
       } catch {
         // ignore parse errors
