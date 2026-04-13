@@ -56,19 +56,11 @@ export function SubtaskCard({
       className={cn("relative w-full gap-2 rounded-lg border py-0", className)}
       open={!collapsed}
     >
-      <div
-        className={cn(
-          "ambilight z-[-1]",
-          task.status === "in_progress" ? "enabled" : "",
-        )}
-      ></div>
       {task.status === "in_progress" && (
-        <>
-          <ShineBorder
-            borderWidth={1.5}
-            shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]}
-          />
-        </>
+        <ShineBorder
+          borderWidth={1.5}
+          shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]}
+        />
       )}
       <div className="bg-background/95 flex w-full flex-col rounded-lg">
         <div className="flex w-full items-center justify-between p-0.5">
