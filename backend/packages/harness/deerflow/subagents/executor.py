@@ -176,11 +176,21 @@ class SubagentExecutor:
         # Reuse shared middleware composition with lead agent.
         middlewares = build_subagent_runtime_middlewares(lazy_init=True)
 
+        # Inject the current date so reports / writeups produced by the
+        # subagent aren't anchored to the model's pretraining year.  The
+        # lead agent already appends this tag in ``prompt.py``; subagents
+        # inherit nothing from the parent system prompt so we have to add
+        # it here explicitly.
+        system_prompt = (
+            f"{self.config.system_prompt}\n"
+            f"<current_date>{datetime.now().strftime('%Y-%m-%d, %A')}</current_date>"
+        )
+
         return create_agent(
             model=model,
             tools=self.tools,
             middleware=middlewares,
-            system_prompt=self.config.system_prompt,
+            system_prompt=system_prompt,
             state_schema=ThreadState,
         )
 
