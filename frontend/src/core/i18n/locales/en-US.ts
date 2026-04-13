@@ -48,6 +48,9 @@ export const enUS: Translations = {
     export: "Export",
     exportAsMarkdown: "Export as Markdown",
     exportAsJSON: "Export as JSON",
+    exportAsHTML: "Export as HTML page",
+    exportHtmlShared: "Webpage generated, link copied",
+    openShare: "Open page",
     exportSuccess: "Conversation exported",
   },
 

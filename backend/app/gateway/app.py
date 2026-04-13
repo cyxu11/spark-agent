@@ -11,6 +11,7 @@ from app.gateway.routers import (
     artifacts,
     assistants_compat,
     channels,
+    exports,
     mcp,
     memory,
     models,
@@ -212,6 +213,9 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
 
     # Run Events API
     app.include_router(run_events.router)
+
+    # Thread HTML export sharing
+    app.include_router(exports.router)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict:

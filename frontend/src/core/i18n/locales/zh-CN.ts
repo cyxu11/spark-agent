@@ -48,6 +48,9 @@ export const zhCN: Translations = {
     export: "导出",
     exportAsMarkdown: "导出为 Markdown",
     exportAsJSON: "导出为 JSON",
+    exportAsHTML: "导出为 HTML 网页",
+    exportHtmlShared: "网页已生成，链接已复制",
+    openShare: "打开网页",
     exportSuccess: "对话已导出",
   },
 

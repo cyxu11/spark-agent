@@ -37,6 +37,9 @@ export interface Translations {
     export: string;
     exportAsMarkdown: string;
     exportAsJSON: string;
+    exportAsHTML: string;
+    exportHtmlShared: string;
+    openShare: string;
     exportSuccess: string;
   };
 

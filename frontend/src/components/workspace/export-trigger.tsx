@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileJson, FileText } from "lucide-react";
+import { Download, FileCode2, FileJson, FileText } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/core/i18n/hooks";
 import {
+  exportThreadAsHTML,
   exportThreadAsJSON,
   exportThreadAsMarkdown,
 } from "@/core/threads/export";
@@ -28,7 +29,7 @@ export function ExportTrigger({ threadId }: { threadId: string }) {
   const messages = thread.messages;
 
   const handleExport = useCallback(
-    (format: "markdown" | "json") => {
+    async (format: "markdown" | "json" | "html") => {
       if (messages.length === 0) {
         toast.error(t.conversation.noMessages);
         return;
@@ -41,10 +42,33 @@ export function ExportTrigger({ threadId }: { threadId: string }) {
 
       if (format === "markdown") {
         exportThreadAsMarkdown(agentThread, messages);
-      } else {
+        toast.success(t.common.exportSuccess);
+      } else if (format === "json") {
         exportThreadAsJSON(agentThread, messages);
+        toast.success(t.common.exportSuccess);
+      } else {
+        const shareUrl = await exportThreadAsHTML(agentThread, messages);
+        if (shareUrl) {
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success(t.common.exportHtmlShared, {
+              description: shareUrl,
+              action: {
+                label: t.common.openShare,
+                onClick: () => window.open(shareUrl, "_blank"),
+              },
+              duration: 8000,
+            });
+          } catch {
+            toast.success(t.common.exportHtmlShared, {
+              description: shareUrl,
+              duration: 8000,
+            });
+          }
+        } else {
+          toast.success(t.common.exportSuccess);
+        }
       }
-      toast.success(t.common.exportSuccess);
     },
     [messages, thread.values, threadId, t],
   );
@@ -67,11 +91,15 @@ export function ExportTrigger({ threadId }: { threadId: string }) {
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => handleExport("markdown")}>
+        <DropdownMenuItem onSelect={() => void handleExport("html")}>
+          <FileCode2 className="text-muted-foreground" />
+          <span>{t.common.exportAsHTML}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void handleExport("markdown")}>
           <FileText className="text-muted-foreground" />
           <span>{t.common.exportAsMarkdown}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleExport("json")}>
+        <DropdownMenuItem onSelect={() => void handleExport("json")}>
           <FileJson className="text-muted-foreground" />
           <span>{t.common.exportAsJSON}</span>
         </DropdownMenuItem>
