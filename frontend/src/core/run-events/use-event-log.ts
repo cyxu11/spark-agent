@@ -27,15 +27,37 @@ export function useEventLog(
     setEvents([]);
     afterIdRef.current = 0;
 
-    fetchRunEvents(threadId, runId)
-      .then(({ events: initial, next_after_id }) => {
-        setEvents(initial);
-        afterIdRef.current = next_after_id;
-        setIsLoading(false);
-      })
-      .catch(() => setIsLoading(false));
+    let cancelled = false;
+    (async () => {
+      try {
+        const accumulated: RunEvent[] = [];
+        let cursor = 0;
+        // The backend caps each page at 200 events; a single run can easily
+        // exceed that (tool calls, streaming deltas, subagent spam).  Loop
+        // until we drain the history so SessionEvents is not truncated.
+        while (!cancelled) {
+          const { events: page, next_after_id } = await fetchRunEvents(
+            threadId,
+            runId,
+            cursor,
+          );
+          if (page.length === 0 || next_after_id === cursor) break;
+          accumulated.push(...page);
+          cursor = next_after_id;
+          if (page.length < 200) break;
+        }
+        if (cancelled) return;
+        setEvents(accumulated);
+        afterIdRef.current = cursor;
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })().catch(() => {
+      if (!cancelled) setIsLoading(false);
+    });
 
     return () => {
+      cancelled = true;
       esRef.current?.close();
       esRef.current = null;
     };

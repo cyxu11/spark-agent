@@ -47,7 +47,7 @@ class RunCreateRequest(BaseModel):
     stream_mode: list[str] | str | None = Field(default=None, description="Stream mode(s)")
     stream_subgraphs: bool = Field(default=False, description="Include subgraph events")
     stream_resumable: bool | None = Field(default=None, description="SSE resumable mode")
-    on_disconnect: Literal["cancel", "continue"] = Field(default="cancel", description="Behaviour on SSE disconnect")
+    on_disconnect: Literal["cancel", "continue"] = Field(default="continue", description="Behaviour on SSE disconnect (matches LangGraph Platform default; 'continue' keeps the run alive so browser refresh / reconnect does not kill mid-flight runs)")
     on_completion: Literal["delete", "keep"] = Field(default="keep", description="Delete temp thread on completion")
     multitask_strategy: Literal["reject", "rollback", "interrupt", "enqueue"] = Field(default="reject", description="Concurrency strategy")
     after_seconds: float | None = Field(default=None, description="Delayed execution")

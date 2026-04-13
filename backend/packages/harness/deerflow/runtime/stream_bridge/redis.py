@@ -2,12 +2,39 @@
 from __future__ import annotations
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 from typing import Any
 from .base import END_SENTINEL, HEARTBEAT_SENTINEL, StreamBridge, StreamEvent
 logger = logging.getLogger(__name__)
 _STREAM_PREFIX = "stream:"
 _END_EVENT = "__end__"
+# Valid Redis stream ID: "<ms>" or "<ms>-<seq>" (e.g. "1729957800000-0").
+# We also accept the special "0" / "0-0" sentinel used for "from beginning".
+_REDIS_STREAM_ID_RE = re.compile(r"^\d+(-\d+)?$")
+
+
+def _normalize_start_id(last_event_id: str | None) -> str:
+    """Return a Redis-valid XREAD start ID.
+
+    The browser may send arbitrary ``Last-Event-ID`` values (empty, a
+    plain integer from a different bridge implementation, etc.).  Redis
+    rejects anything that is not ``<ms>[-<seq>]`` with
+    ``ResponseError: Invalid stream ID specified as stream command
+    argument`` which surfaces in the browser as
+    ``ERR_INCOMPLETE_CHUNKED_ENCODING``.  Fall back to replaying from
+    the beginning when the value is missing or malformed.
+    """
+    if not last_event_id:
+        return "0-0"
+    candidate = last_event_id.strip()
+    if _REDIS_STREAM_ID_RE.fullmatch(candidate):
+        return candidate
+    logger.warning(
+        "redis-stream-bridge: ignoring malformed Last-Event-ID %r; replaying from start",
+        last_event_id,
+    )
+    return "0-0"
 class RedisStreamBridge(StreamBridge):
     """Cross-process stream bridge backed by Redis Streams.
     Each run gets its own Redis stream key ``stream:{run_id}``.
@@ -42,8 +69,10 @@ class RedisStreamBridge(StreamBridge):
         heartbeat_interval: float = 15.0,
     ) -> AsyncIterator[StreamEvent]:
         key = self._key(run_id)
-        # Redis XREAD uses "$" for new-only or a specific entry ID for replay
-        start_id = last_event_id if last_event_id else "0-0"
+        # Redis XREAD uses "$" for new-only or a specific entry ID for replay.
+        # Validate the caller-supplied Last-Event-ID to avoid "Invalid stream ID"
+        # errors that would abort the SSE response mid-flight.
+        start_id = _normalize_start_id(last_event_id)
         while True:
             # Block up to heartbeat_interval seconds waiting for new entries
             block_ms = int(heartbeat_interval * 1000)

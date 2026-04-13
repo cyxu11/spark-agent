@@ -168,8 +168,23 @@ export function useThreadStream({
       // Reset when the UI moves back to a brand new unsaved thread.
       startedRef.current = false;
       setOnStreamThreadId(normalizedThreadId);
+      setCurrentRunId(null);
     } else {
       setOnStreamThreadId(normalizedThreadId);
+      // Seed currentRunId from sessionStorage so the SessionEvents panel can
+      // resubscribe to the live event log after a page refresh.  Without this,
+      // ``useStream.reconnectOnMount`` rejoins the stream silently without
+      // firing ``onCreated``, so currentRunId would remain null and the
+      // events panel would stop receiving updates.
+      if (typeof window !== "undefined") {
+        const stored = window.sessionStorage.getItem(
+          `lg:stream:${normalizedThreadId}`,
+        );
+        const normalized = normalizeStoredRunId(stored);
+        if (normalized) {
+          setCurrentRunId((cur) => cur ?? normalized);
+        }
+      }
     }
     threadIdRef.current = normalizedThreadId;
   }, [threadId]);
