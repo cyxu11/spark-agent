@@ -19,7 +19,7 @@ export function AgentGallery() {
   };
 
   return (
-    <div className="flex size-full flex-col">
+    <div className="portal-surface flex size-full flex-col">
       {/* Page header */}
       <div className="flex items-center justify-between border-b px-6 py-4">
         <div>
