@@ -39,13 +39,13 @@ export function WorkspaceNavMenu() {
             disabled={!mounted}
           >
             {isSidebarOpen ? (
-              <div className="text-muted-foreground flex w-full items-center gap-2 text-left text-sm">
+              <div className="text-sidebar-foreground/70 flex w-full items-center gap-2 text-left text-sm">
                 <SettingsIcon className="size-4" />
                 <span>{t.common.settings}</span>
               </div>
             ) : (
               <div className="flex size-full items-center justify-center">
-                <SettingsIcon className="text-muted-foreground size-4" />
+                <SettingsIcon className="text-sidebar-foreground/70 size-4" />
               </div>
             )}
           </SidebarMenuButton>

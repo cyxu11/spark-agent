@@ -247,14 +247,14 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.965 0.0098 87.47);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0.0098 87.47);
+  --sidebar: oklch(0.952 0.022 225);
+  --sidebar-foreground: oklch(0.18 0.015 225);
+  --sidebar-primary: oklch(0.36 0.14 230);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.925 0.0098 87.47);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0.0098 87.47);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.905 0.032 225);
+  --sidebar-accent-foreground: oklch(0.18 0.015 225);
+  --sidebar-border: oklch(0.875 0.024 225);
+  --sidebar-ring: oklch(0.45 0.12 225);
 }
 
 .dark {
@@ -281,13 +281,13 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.245 0.0036 106.64);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar: oklch(0.195 0.048 245);
+  --sidebar-foreground: oklch(0.94 0.008 225);
+  --sidebar-primary: oklch(0.58 0.18 225);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.29 0.0036 106.64);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-accent: oklch(0.255 0.048 245);
+  --sidebar-accent-foreground: oklch(0.94 0.008 225);
+  --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.556 0 0);
   font-weight: 300;
 }
@@ -389,4 +389,17 @@
   --container-width-sm: calc(var(--spacing) * 144);
   --container-width-md: calc(var(--spacing) * 204);
   --container-width-lg: calc(var(--spacing) * 256);
+}
+
+/* White card input box with blue border */
+.prompt-white-input [data-slot="input-group"] {
+  background: white;
+  border-color: oklch(0.80 0.05 225);
+  box-shadow: 0 2px 10px 0 oklch(0.7 0.06 225 / 0.10);
+}
+
+.dark .prompt-white-input [data-slot="input-group"] {
+  background: oklch(0.22 0.03 245);
+  border-color: oklch(0.35 0.08 245 / 0.65);
+  box-shadow: 0 2px 10px 0 oklch(0.1 0.04 245 / 0.30);
 }

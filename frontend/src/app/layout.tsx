@@ -10,6 +10,11 @@ import { detectLocaleServer } from "@/core/i18n/server";
 export const metadata: Metadata = {
   title: "Spark-Agent",
   description: "A LangChain-based framework for building super agents.",
+  icons: {
+    icon: "https://flames.iflytek.com:1443/intel/logo.png",
+    shortcut: "https://flames.iflytek.com:1443/intel/logo.png",
+    apple: "https://flames.iflytek.com:1443/intel/logo.png",
+  },
 };
 
 export default async function RootLayout({

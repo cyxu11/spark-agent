@@ -57,7 +57,10 @@ export default function ChatsPage() {
                         <div>{titleOfThread(thread)}</div>
                       </div>
                       {thread.updated_at && (
-                        <div className="text-muted-foreground text-sm">
+                        <div
+                          className="text-muted-foreground text-sm"
+                          suppressHydrationWarning
+                        >
                           {formatTimeAgo(thread.updated_at)}
                         </div>
                       )}

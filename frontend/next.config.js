@@ -16,6 +16,16 @@ const withNextra = nextra({});
 
 /** @type {import("next").NextConfig} */
 const config = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "flames.iflytek.com",
+        port: "1443",
+        pathname: "/**",
+      },
+    ],
+  },
   i18n: {
     locales: ["en", "zh"],
     defaultLocale: "en",

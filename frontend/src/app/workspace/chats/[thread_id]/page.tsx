@@ -91,7 +91,17 @@ export default function ChatPage() {
   return (
     <ThreadContext.Provider value={{ thread, isMock }}>
       <ChatBox threadId={threadId}>
-        <div className="relative flex size-full min-h-0 justify-between">
+        <div
+          className="relative flex size-full min-h-0 justify-between"
+          style={
+            isNewThread
+              ? {
+                  background:
+                    "linear-gradient(135deg, #cce8ff 0%, #dff0ff 30%, #eef7ff 60%, #f7fbff 100%)",
+                }
+              : undefined
+          }
+        >
           <header
             className={cn(
               "absolute top-0 right-0 left-0 z-30 flex h-12 shrink-0 items-center px-4",
@@ -132,10 +142,8 @@ export default function ChatPage() {
               <div
                 className={cn(
                   "relative w-full",
-                  isNewThread && "-translate-y-[calc(50vh-96px)]",
-                  isNewThread
-                    ? "max-w-(--container-width-sm)"
-                    : "max-w-(--container-width-md)",
+                  isNewThread && "-translate-y-[calc(50vh-110px)]",
+                  "max-w-(--container-width-md)",
                 )}
               >
                 <div className="absolute -top-4 right-0 left-0 z-0">

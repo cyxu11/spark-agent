@@ -61,5 +61,5 @@ export function ModeHoverGuide({
   const description = t.inputBox[getModeDescriptionKey(mode)];
   const content = showTitle ? `${label}: ${description}` : description;
 
-  return <Tooltip content={content}>{children}</Tooltip>;
+  return <Tooltip content={content} side="bottom">{children}</Tooltip>;
 }
