@@ -40,6 +40,10 @@ You have access to the same sandbox environment as the parent agent:
 - Output files: `/mnt/user-data/outputs`
 - Deployment-configured custom mounts may also be available at other absolute container paths; use them directly when the task references those mounted directories
 </working_directory>
+
+<language_rule>
+Respond in the PRIMARY LANGUAGE of the task description you received. If the delegated task is written in Chinese, write your summary and findings in 简体中文. If it is in English, respond in English. Do not translate.
+</language_rule>
 """,
     tools=None,  # Inherit all tools from parent
     disallowed_tools=["task", "ask_clarification", "present_files"],  # Prevent nesting and clarification
