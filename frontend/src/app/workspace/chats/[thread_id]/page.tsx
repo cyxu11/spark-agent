@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
 import { type PromptInputMessage } from "@/components/ai-elements/prompt-input";
@@ -17,7 +18,15 @@ import {
   MESSAGE_LIST_FOLLOWUPS_EXTRA_PADDING_BOTTOM,
 } from "@/components/workspace/messages";
 import { ThreadContext } from "@/components/workspace/messages/context";
-import { SessionEventsSheet } from "@/components/workspace/session-events/session-events-sheet";
+// Dynamic + ssr:false avoids Radix Dialog `useId` hydration mismatches
+// for the auto-generated aria-controls / id attributes.
+const SessionEventsSheet = dynamic(
+  () =>
+    import("@/components/workspace/session-events/session-events-sheet").then(
+      (m) => m.SessionEventsSheet,
+    ),
+  { ssr: false },
+);
 import { ThreadTitle } from "@/components/workspace/thread-title";
 import { TodoList } from "@/components/workspace/todo-list";
 import { TokenUsageIndicator } from "@/components/workspace/token-usage-indicator";

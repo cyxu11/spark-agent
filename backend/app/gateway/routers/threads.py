@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -33,6 +34,44 @@ THREADS_NS: tuple[str, ...] = ("threads",)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/threads", tags=["threads"])
+
+# Upper bound for the Phase 2 checkpointer scan in ``search_threads``.
+# Checkpoints are stored ``ORDER BY checkpoint_id DESC`` so this window
+# always covers the most recent activity; anything older will already
+# have been migrated to the Store on a previous request.
+_PHASE2_CHECKPOINT_LIMIT = 1000
+
+# Process-local guard: once Phase 2 has run and discovered nothing new,
+# we trust the Store as the source of truth and skip the expensive full
+# scan on subsequent requests.  Flipped back to False if the Store is
+# wiped or becomes unavailable.
+_phase2_converged = False
+
+
+def _format_ts(value: Any) -> str:
+    """Normalize a timestamp to an ISO-8601 string.
+
+    Older Store records persisted ``time.time()`` floats and we render
+    them through ``str(...)`` which produced values like
+    ``"1729957800.12"`` — ``new Date(...)`` in the browser parses those
+    as ``Invalid Date`` and the UI shows an empty timestamp.  Convert
+    floats / ints to UTC ISO strings; pass-through anything that is
+    already a string and looks ISO-ish.
+    """
+    if value is None or value == "":
+        return ""
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat()
+        except (OverflowError, ValueError, OSError):
+            return ""
+    if isinstance(value, str):
+        # Numeric epoch stored as string (e.g. legacy "1729957800.12").
+        try:
+            return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat()
+        except ValueError:
+            return value
+    return str(value)
 
 
 # ---------------------------------------------------------------------------
@@ -271,8 +310,8 @@ async def create_thread(body: ThreadCreateRequest, request: Request) -> ThreadRe
             return ThreadResponse(
                 thread_id=thread_id,
                 status=existing_record.get("status", "idle"),
-                created_at=str(existing_record.get("created_at", "")),
-                updated_at=str(existing_record.get("updated_at", "")),
+                created_at=_format_ts(existing_record.get("created_at")),
+                updated_at=_format_ts(existing_record.get("updated_at")),
                 metadata=existing_record.get("metadata", {}),
             )
 
@@ -315,8 +354,8 @@ async def create_thread(body: ThreadCreateRequest, request: Request) -> ThreadRe
     return ThreadResponse(
         thread_id=thread_id,
         status="idle",
-        created_at=str(now),
-        updated_at=str(now),
+        created_at=_format_ts(now),
+        updated_at=_format_ts(now),
         metadata=body.metadata,
     )
 
@@ -358,8 +397,8 @@ async def search_threads(body: ThreadSearchRequest, request: Request) -> list[Th
             merged[val["thread_id"]] = ThreadResponse(
                 thread_id=val["thread_id"],
                 status=val.get("status", "idle"),
-                created_at=str(val.get("created_at", "")),
-                updated_at=str(val.get("updated_at", "")),
+                created_at=_format_ts(val.get("created_at")),
+                updated_at=_format_ts(val.get("updated_at")),
                 metadata=val.get("metadata", {}),
                 values=val.get("values", {}),
             )
@@ -368,45 +407,63 @@ async def search_threads(body: ThreadSearchRequest, request: Request) -> list[Th
     # Phase 2: Checkpointer supplement
     # Discovers threads not yet in the Store (e.g. created by LangGraph
     # Server) and lazily migrates them so future searches skip this phase.
+    #
+    # Skipped once we have confirmed the Store is fully converged — every
+    # new thread goes through ``start_run`` which writes the Store, so
+    # after one successful pass with zero discoveries there is nothing
+    # more to migrate.  This avoids a ``SELECT ... ORDER BY checkpoint_id
+    # DESC`` full table scan of the ``checkpoints`` table on every search
+    # request, which scales with ``threads * steps`` and was the source
+    # of the 2-3s latency on /threads/search.
     # -----------------------------------------------------------------------
+    global _phase2_converged
+    skip_phase2 = _phase2_converged and bool(merged)
+    discovered = 0
     try:
-        async for checkpoint_tuple in checkpointer.alist(None):
-            cfg = getattr(checkpoint_tuple, "config", {})
-            thread_id = cfg.get("configurable", {}).get("thread_id")
-            if not thread_id or thread_id in merged:
-                continue
+        if not skip_phase2:
+            async for checkpoint_tuple in checkpointer.alist(None, limit=_PHASE2_CHECKPOINT_LIMIT):
+                cfg = getattr(checkpoint_tuple, "config", {})
+                thread_id = cfg.get("configurable", {}).get("thread_id")
+                if not thread_id or thread_id in merged:
+                    continue
 
-            # Skip sub-graph checkpoints (checkpoint_ns is non-empty for those)
-            if cfg.get("configurable", {}).get("checkpoint_ns", ""):
-                continue
+                # Skip sub-graph checkpoints (checkpoint_ns is non-empty for those)
+                if cfg.get("configurable", {}).get("checkpoint_ns", ""):
+                    continue
 
-            ckpt_meta = getattr(checkpoint_tuple, "metadata", {}) or {}
-            # Strip LangGraph internal keys from the user-visible metadata dict
-            user_meta = {k: v for k, v in ckpt_meta.items() if k not in ("created_at", "updated_at", "step", "source", "writes", "parents")}
+                discovered += 1
+                ckpt_meta = getattr(checkpoint_tuple, "metadata", {}) or {}
+                # Strip LangGraph internal keys from the user-visible metadata dict
+                user_meta = {k: v for k, v in ckpt_meta.items() if k not in ("created_at", "updated_at", "step", "source", "writes", "parents")}
 
-            # Extract state values (title) from the checkpoint's channel_values
-            checkpoint_data = getattr(checkpoint_tuple, "checkpoint", {}) or {}
-            channel_values = checkpoint_data.get("channel_values", {})
-            ckpt_values = {}
-            if title := channel_values.get("title"):
-                ckpt_values["title"] = title
+                # Extract state values (title) from the checkpoint's channel_values
+                checkpoint_data = getattr(checkpoint_tuple, "checkpoint", {}) or {}
+                channel_values = checkpoint_data.get("channel_values", {})
+                ckpt_values = {}
+                if title := channel_values.get("title"):
+                    ckpt_values["title"] = title
 
-            thread_resp = ThreadResponse(
-                thread_id=thread_id,
-                status=_derive_thread_status(checkpoint_tuple),
-                created_at=str(ckpt_meta.get("created_at", "")),
-                updated_at=str(ckpt_meta.get("updated_at", ckpt_meta.get("created_at", ""))),
-                metadata=user_meta,
-                values=ckpt_values,
-            )
-            merged[thread_id] = thread_resp
+                thread_resp = ThreadResponse(
+                    thread_id=thread_id,
+                    status=_derive_thread_status(checkpoint_tuple),
+                    created_at=_format_ts(ckpt_meta.get("created_at")),
+                    updated_at=_format_ts(ckpt_meta.get("updated_at") or ckpt_meta.get("created_at")),
+                    metadata=user_meta,
+                    values=ckpt_values,
+                )
+                merged[thread_id] = thread_resp
 
-            # Lazy migration — write to Store so the next search finds it there
-            if store is not None:
-                try:
-                    await _store_upsert(store, thread_id, metadata=user_meta, values=ckpt_values or None)
-                except Exception:
-                    logger.debug("Failed to migrate thread %s to store (non-fatal)", thread_id)
+                # Lazy migration — write to Store so the next search finds it there
+                if store is not None:
+                    try:
+                        await _store_upsert(store, thread_id, metadata=user_meta, values=ckpt_values or None)
+                    except Exception:
+                        logger.debug("Failed to migrate thread %s to store (non-fatal)", thread_id)
+
+            # If the scan ran to completion and found nothing new, the Store
+            # is in sync — future requests can skip this phase entirely.
+            if discovered == 0 and store is not None and merged:
+                _phase2_converged = True
     except Exception:
         logger.exception("Checkpointer scan failed during thread search")
         # Don't raise — return whatever was collected from Store + partial scan
@@ -451,8 +508,8 @@ async def patch_thread(thread_id: str, body: ThreadPatchRequest, request: Reques
     return ThreadResponse(
         thread_id=thread_id,
         status=updated.get("status", "idle"),
-        created_at=str(updated.get("created_at", "")),
-        updated_at=str(now),
+        created_at=_format_ts(updated.get("created_at")),
+        updated_at=_format_ts(now),
         metadata=updated.get("metadata", {}),
     )
 
@@ -505,8 +562,8 @@ async def get_thread(thread_id: str, request: Request) -> ThreadResponse:
     return ThreadResponse(
         thread_id=thread_id,
         status=status,
-        created_at=str(record.get("created_at", "")),
-        updated_at=str(record.get("updated_at", "")),
+        created_at=_format_ts(record.get("created_at")),
+        updated_at=_format_ts(record.get("updated_at")),
         metadata=record.get("metadata", {}),
         values=serialize_channel_values(channel_values),
     )
@@ -556,7 +613,7 @@ async def get_thread_state(thread_id: str, request: Request) -> ThreadStateRespo
         checkpoint={"id": checkpoint_id, "ts": str(metadata.get("created_at", ""))},
         checkpoint_id=checkpoint_id,
         parent_checkpoint_id=parent_checkpoint_id,
-        created_at=str(metadata.get("created_at", "")),
+        created_at=_format_ts(metadata.get("created_at")),
         tasks=tasks,
     )
 
@@ -640,7 +697,7 @@ async def update_thread_state(thread_id: str, body: ThreadStateUpdateRequest, re
         next=[],
         metadata=metadata,
         checkpoint_id=new_checkpoint_id,
-        created_at=str(metadata.get("created_at", "")),
+        created_at=_format_ts(metadata.get("created_at")),
     )
 
 
@@ -678,7 +735,7 @@ async def get_thread_history(thread_id: str, body: ThreadHistoryRequest, request
                     parent_checkpoint_id=parent_id,
                     metadata=metadata,
                     values=serialize_channel_values(channel_values),
-                    created_at=str(metadata.get("created_at", "")),
+                    created_at=_format_ts(metadata.get("created_at")),
                     next=next_tasks,
                 )
             )
