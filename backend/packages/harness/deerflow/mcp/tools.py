@@ -97,8 +97,24 @@ async def get_mcp_tools() -> list[BaseTool]:
 
         client = MultiServerMCPClient(servers_config, tool_interceptors=tool_interceptors, tool_name_prefix=True)
 
-        # Get all tools from all servers
-        tools = await client.get_tools()
+        # Load tools per-server so a single broken endpoint (e.g. a 502 from
+        # one MCP host) does not nuke the entire MCP tool list.  The upstream
+        # ``client.get_tools()`` wraps everything in an ``asyncio.gather``
+        # TaskGroup, which fails-fast on the first exception — previously any
+        # one failing server silently removed all other servers' tools too.
+        tools: list[BaseTool] = []
+        for server_name in list(client.connections.keys()):
+            try:
+                server_tools = await client.get_tools(server_name=server_name)
+            except Exception as exc:
+                logger.warning(
+                    "MCP server %r failed to load tools (%s); skipping and continuing with other servers",
+                    server_name,
+                    exc,
+                )
+                continue
+            logger.info("MCP server %r contributed %d tool(s)", server_name, len(server_tools))
+            tools.extend(server_tools)
         logger.info(f"Successfully loaded {len(tools)} tool(s) from MCP servers")
 
         # Patch tools to support sync invocation, as deerflow client streams synchronously
