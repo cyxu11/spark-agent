@@ -3,6 +3,7 @@ import {
   CopyIcon,
   DownloadIcon,
   EyeIcon,
+  FileCode2Icon,
   LoaderIcon,
   PackageIcon,
   SquareArrowOutUpRightIcon,
@@ -34,6 +35,7 @@ import { urlOfArtifact } from "@/core/artifacts/utils";
 import { useI18n } from "@/core/i18n/hooks";
 import { installSkill } from "@/core/skills/api";
 import { streamdownPlugins } from "@/core/streamdown";
+import { exportReportAsHtml } from "@/core/threads/report-html";
 import { checkCodeFile, getFileName } from "@/core/utils/files";
 import { env } from "@/env";
 import { cn } from "@/lib/utils";
@@ -93,6 +95,8 @@ export function ArtifactFileDetail({
 
   const [viewMode, setViewMode] = useState<"code" | "preview">("code");
   const [isInstalling, setIsInstalling] = useState(false);
+  const [isExportingHtml, setIsExportingHtml] = useState(false);
+  const isMarkdownReport = language === "markdown" && !isWriteFile;
   const { isMock } = useThread();
   useEffect(() => {
     if (isSupportPreview) {
@@ -101,6 +105,45 @@ export function ArtifactFileDetail({
       setViewMode("code");
     }
   }, [isSupportPreview]);
+
+  const handleExportHtml = useCallback(async () => {
+    if (isExportingHtml) return;
+    if (!displayContent.trim()) {
+      toast.error(t.conversation.noMessages);
+      return;
+    }
+    setIsExportingHtml(true);
+    try {
+      const baseName = getFileName(filepath).replace(/\.[^.]+$/, "");
+      const shareUrl = await exportReportAsHtml(displayContent, {
+        title: baseName || "Research Report",
+        threadId,
+        filename: baseName || "report",
+      });
+      if (shareUrl) {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+        } catch {
+          // Clipboard write may fail in non-secure contexts; ignore.
+        }
+        toast.success(t.common.exportHtmlShared, {
+          description: shareUrl,
+          action: {
+            label: t.common.openShare,
+            onClick: () => window.open(shareUrl, "_blank", "noopener,noreferrer"),
+          },
+          duration: 8000,
+        });
+      } else {
+        toast.success(t.common.exportSuccess);
+      }
+    } catch (err) {
+      console.error("Failed to export HTML report:", err);
+      toast.error(t.common.exportFailed ?? "Failed to export");
+    } finally {
+      setIsExportingHtml(false);
+    }
+  }, [displayContent, filepath, threadId, isExportingHtml, t]);
 
   const handleInstallSkill = useCallback(async () => {
     if (isInstalling) return;
@@ -217,6 +260,15 @@ export function ArtifactFileDetail({
                   }
                 }}
                 tooltip={t.clipboard.copyToClipboard}
+              />
+            )}
+            {isMarkdownReport && (
+              <ArtifactAction
+                icon={isExportingHtml ? LoaderIcon : FileCode2Icon}
+                label={t.common.exportAsHTML}
+                tooltip={t.common.exportAsHTML}
+                disabled={isExportingHtml || !displayContent}
+                onClick={handleExportHtml}
               />
             )}
             {!isWriteFile && (
