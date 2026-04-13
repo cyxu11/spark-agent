@@ -596,9 +596,30 @@ summarization:
   # Set to null to skip trimming (not recommended for very long conversations)
   trim_tokens_to_summarize: 15564
 
-  # Custom summary prompt template (null = use default LangChain prompt)
-  # The prompt should guide the model to extract important context
-  summary_prompt: null
+  # Custom summary prompt template (null = use default LangChain prompt).
+  # The default is fully English, which makes the model emit English summaries
+  # even in Chinese conversations.  The override below adds a language rule that
+  # makes the summary match the conversation's primary language.
+  summary_prompt: |-
+    <role>
+    Context Extraction Assistant
+    </role>
+
+    <primary_objective>
+    Your sole objective is to extract the highest-quality, most relevant context from the conversation history below so that it can replace the raw history and free up tokens.
+    </primary_objective>
+
+    <language_rule>
+    Write the extracted context in the PRIMARY LANGUAGE of the conversation itself. If the user and prior assistant turns are in Chinese, respond entirely in 简体中文. If they are in English, respond in English. Do not translate — match the source language.
+    </language_rule>
+
+    <instructions>
+    The conversation history below will be replaced with the context you extract here, so extract everything that matters: user goals, decisions made, tool results, open action items, and constraints. Avoid repeating actions already completed. Respond ONLY with the extracted context — no preface, no closing remarks.
+    </instructions>
+
+    <messages>
+    {messages}
+    </messages>
 
 # ============================================================================
 # Memory Configuration
