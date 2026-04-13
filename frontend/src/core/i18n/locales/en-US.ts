@@ -247,6 +247,20 @@ export const enUS: Translations = {
   // Chats
   chats: {
     searchChats: "Search chats",
+    status: {
+      idle: "Completed",
+      busy: "Running",
+      interrupted: "Interrupted",
+      error: "Failed",
+      unknown: "Unknown",
+    },
+    createdAt: "Created",
+    deleteConfirmTitle: "Delete conversation",
+    deleteConfirmDescription:
+      "Are you sure you want to delete this conversation? This action cannot be undone.",
+    deleteSuccess: "Conversation deleted",
+    deleteFailed: "Failed to delete",
+    empty: "No conversations yet",
   },
 
   // Page titles (document title)

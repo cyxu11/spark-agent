@@ -235,6 +235,19 @@ export const zhCN: Translations = {
   // Chats
   chats: {
     searchChats: "搜索对话",
+    status: {
+      idle: "已完成",
+      busy: "运行中",
+      interrupted: "已中断",
+      error: "失败",
+      unknown: "未知",
+    },
+    createdAt: "创建于",
+    deleteConfirmTitle: "删除对话",
+    deleteConfirmDescription: "确定要删除该对话吗？此操作不可撤销。",
+    deleteSuccess: "对话已删除",
+    deleteFailed: "删除失败",
+    empty: "暂无历史对话",
   },
 
   // Page titles (document title)

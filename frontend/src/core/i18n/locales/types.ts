@@ -179,6 +179,19 @@ export interface Translations {
   // Chats
   chats: {
     searchChats: string;
+    status: {
+      idle: string;
+      busy: string;
+      interrupted: string;
+      error: string;
+      unknown: string;
+    };
+    createdAt: string;
+    deleteConfirmTitle: string;
+    deleteConfirmDescription: string;
+    deleteSuccess: string;
+    deleteFailed: string;
+    empty: string;
   };
 
   // Page titles (document title)
