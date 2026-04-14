@@ -57,7 +57,33 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 DOCKER_DIR="$REPO_ROOT/docker"
-COMPOSE_CMD=(docker compose -p deer-flow -f "$DOCKER_DIR/docker-compose.yaml")
+
+# Resolve the compose binary: prefer the v2 plugin (`docker compose`) but
+# fall back to the legacy standalone `docker-compose` binary if the plugin
+# isn't installed.  Keeps offline / constrained environments happy.
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE_BIN=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_BIN=(docker-compose)
+    echo "Note: using legacy 'docker-compose' binary (v2 plugin not found)"
+else
+    echo "ERROR: neither 'docker compose' plugin nor 'docker-compose' binary is available" >&2
+    exit 1
+fi
+COMPOSE_ARGS=(-p deer-flow -f "$DOCKER_DIR/docker-compose.yaml")
+# When a docker-compose.override.yaml sits next to the main file, docker
+# compose normally auto-merges it — but only when -f is NOT specified.
+# Since we always pass -f explicitly, we have to add the override file
+# manually.  Lets operators disable bundled services (e.g. nginx) or pin
+# host port mappings by dropping an override next to the main compose file.
+if [ -f "$DOCKER_DIR/docker-compose.override.yaml" ]; then
+    COMPOSE_ARGS+=(-f "$DOCKER_DIR/docker-compose.override.yaml")
+    echo "Using override: $DOCKER_DIR/docker-compose.override.yaml"
+elif [ -f "$DOCKER_DIR/docker-compose.override.yml" ]; then
+    COMPOSE_ARGS+=(-f "$DOCKER_DIR/docker-compose.override.yml")
+    echo "Using override: $DOCKER_DIR/docker-compose.override.yml"
+fi
+COMPOSE_CMD=("${COMPOSE_BIN[@]}" "${COMPOSE_ARGS[@]}")
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 
