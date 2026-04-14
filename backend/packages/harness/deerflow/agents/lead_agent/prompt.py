@@ -722,4 +722,22 @@ def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagen
         acp_section=acp_and_mounts_section,
     )
 
-    return prompt + f"\n<current_date>{datetime.now().strftime('%Y-%m-%d, %A')}</current_date>"
+    now = datetime.now()
+    year = now.year
+    # Explicit temporal-reasoning block: many models ignore a bare
+    # ``<current_date>`` tag and fall back to their training-era default
+    # (e.g. treating "past 5 years" as 2019-2024).  State the anchor date
+    # and show the arithmetic so the model commits to it.
+    date_block = (
+        f"\n<current_date>{now.strftime('%Y-%m-%d, %A')}</current_date>\n"
+        f"<temporal_reasoning>\n"
+        f"今天是 {now.strftime('%Y年%m月%d日')}（{year} 年）。在所有涉及时间的推理、"
+        f"搜索查询和报告生成时，必须以这一日期为基准：\n"
+        f"- “近5年”= {year - 5}~{year} 年\n"
+        f"- “近3年”= {year - 3}~{year} 年\n"
+        f"- “去年”= {year - 1} 年，“今年”= {year} 年\n"
+        f"- 所有相对时间短语（最近、最新、上个季度、去年等）都以 {year} 年为参考点。\n"
+        f"不要使用训练数据中的默认年份。\n"
+        f"</temporal_reasoning>"
+    )
+    return prompt + date_block

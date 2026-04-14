@@ -181,9 +181,18 @@ class SubagentExecutor:
         # lead agent already appends this tag in ``prompt.py``; subagents
         # inherit nothing from the parent system prompt so we have to add
         # it here explicitly.
+        now = datetime.now()
+        year = now.year
         system_prompt = (
             f"{self.config.system_prompt}\n"
-            f"<current_date>{datetime.now().strftime('%Y-%m-%d, %A')}</current_date>"
+            f"<current_date>{now.strftime('%Y-%m-%d, %A')}</current_date>\n"
+            f"<temporal_reasoning>\n"
+            f"今天是 {now.strftime('%Y年%m月%d日')}（{year} 年）。凡涉及时间的"
+            f"推理、搜索、报告生成一律以此为基准：\n"
+            f"- “近5年” = {year - 5}~{year} 年；“近3年” = {year - 3}~{year} 年\n"
+            f"- “去年” = {year - 1} 年；“今年” = {year} 年\n"
+            f"- 不要使用训练数据里的默认年份。\n"
+            f"</temporal_reasoning>"
         )
 
         return create_agent(
