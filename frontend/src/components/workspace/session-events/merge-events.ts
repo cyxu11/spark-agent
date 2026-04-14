@@ -82,6 +82,10 @@ export function mergeMessageEvents(events: RunEvent[]): ProcessedEvent[] {
 
   while (i < events.length) {
     const ev = events[i];
+    if (!ev) {
+      i++;
+      continue;
+    }
 
     if (
       ev.event === "messages" &&
@@ -94,13 +98,17 @@ export function mergeMessageEvents(events: RunEvent[]): ProcessedEvent[] {
       // 收集同一个 msgId 的连续 messages 事件
       const group: RunEvent[] = [ev];
       let j = i + 1;
-      while (
-        j < events.length &&
-        events[j].event === "messages" &&
-        Array.isArray(events[j].data) &&
-        ((events[j].data as unknown[])[0] as Record<string, unknown>)?.id === msgId
-      ) {
-        group.push(events[j]);
+      while (j < events.length) {
+        const next = events[j];
+        if (
+          !next ||
+          next.event !== "messages" ||
+          !Array.isArray(next.data) ||
+          ((next.data as unknown[])[0] as Record<string, unknown> | undefined)?.id !== msgId
+        ) {
+          break;
+        }
+        group.push(next);
         j++;
       }
 

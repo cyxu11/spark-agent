@@ -78,7 +78,8 @@ export function useEventLog(
       try {
         const ev: RunEvent = JSON.parse(e.data as string);
         setEvents((prev) => {
-          if (prev.length > 0 && prev[prev.length - 1].id >= ev.id) return prev;
+          const last = prev[prev.length - 1];
+          if (last && last.id >= ev.id) return prev;
           return [...prev, ev];
         });
         afterIdRef.current = ev.id;
