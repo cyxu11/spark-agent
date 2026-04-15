@@ -66,6 +66,9 @@ export const enUS: Translations = {
     greeting: "Hello, again!",
     description:
       "Welcome to Spark-Agent, an open source super agent. With built-in and custom skills, Spark-Agent helps you search on the web, analyze data, and generate artifacts like slides, web pages and do almost anything.",
+    title: "Spark Industry Master",
+    subtitlePrefix: "Industry insights, instant answers, ",
+    subtitleHighlight: "deep research",
 
     createYourOwnSkill: "Create Your Own Skill",
     createYourOwnSkillDescription:

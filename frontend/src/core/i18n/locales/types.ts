@@ -53,6 +53,9 @@ export interface Translations {
   welcome: {
     greeting: string;
     description: string;
+    title: string;
+    subtitlePrefix: string;
+    subtitleHighlight: string;
     createYourOwnSkill: string;
     createYourOwnSkillDescription: string;
   };

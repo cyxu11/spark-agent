@@ -55,7 +55,7 @@ export function ArtifactFileDetail({
   filepath: string;
   threadId: string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { artifacts, setOpen, select } = useArtifacts();
   const isWriteFile = useMemo(() => {
     return filepathFromProps.startsWith("write-file:");
@@ -119,6 +119,7 @@ export function ArtifactFileDetail({
         title: baseName || "Research Report",
         threadId,
         filename: baseName || "report",
+        locale,
       });
       if (shareUrl) {
         try {

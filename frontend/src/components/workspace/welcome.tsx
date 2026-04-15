@@ -40,11 +40,13 @@ export function Welcome({
       )}
     >
       <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-        星火行业大师
+        {t.welcome.title}
       </h1>
       <p className="text-lg text-gray-600 dark:text-gray-400">
-        行业信息，一问即答，
-        <span className="font-medium text-blue-500">深度研究</span>
+        {t.welcome.subtitlePrefix}
+        <span className="font-medium text-blue-500">
+          {t.welcome.subtitleHighlight}
+        </span>
       </p>
     </div>
   );
