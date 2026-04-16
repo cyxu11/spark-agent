@@ -51,7 +51,6 @@ export function WorkspaceHeader({ className }: { className?: string }) {
                 className="h-6 w-6 shrink-0"
                 unoptimized
               />
-              <span className="text-sidebar-foreground font-semibold">Spark-Agent</span>
             </div>
             <SidebarTrigger />
           </div>

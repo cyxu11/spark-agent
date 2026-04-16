@@ -537,20 +537,20 @@ sandbox:
 # Configure timeouts for subagent execution
 # Subagents are background workers delegated tasks by the lead agent
 
-# subagents:
-#   # Default timeout in seconds for all subagents (default: 900 = 15 minutes)
-#   timeout_seconds: 900
-#   # Optional global max-turn override for all subagents
-#   # max_turns: 120
-#
-#   # Optional per-agent overrides
-#   agents:
-#     general-purpose:
-#       timeout_seconds: 1800  # 30 minutes for complex multi-step tasks
-#       max_turns: 160
-#     bash:
-#       timeout_seconds: 300   # 5 minutes for quick command execution
-#       max_turns: 80
+subagents:
+  # Default timeout in seconds for all subagents (default: 900 = 15 minutes)
+  timeout_seconds: 900
+  # Optional global max-turn override for all subagents
+  max_turns: 120
+
+  # Optional per-agent overrides
+  agents:
+    general-purpose:
+      timeout_seconds: 1800  # 30 minutes for complex multi-step tasks
+      max_turns: 160
+    bash:
+      timeout_seconds: 300   # 5 minutes for quick command execution
+      max_turns: 80
 
 # ============================================================================
 # ACP Agents Configuration
@@ -737,11 +737,11 @@ skill_evolution:
 # PostgreSQL (multi-process, production):
 checkpointer:
   type: postgres
-  connection_string: postgresql://deerflow:deerflow123@localhost:5432/deerflow
+  connection_string: $POSTGRES_DSN
 
 event_log:
   enabled: true
-  connection_string: postgresql://deerflow:deerflow123@localhost:5432/deerflow
+  connection_string: $POSTGRES_DSN
 
 # ============================================================================
 # Cluster Mode: Stream Bridge & Uploads

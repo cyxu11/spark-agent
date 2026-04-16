@@ -13,6 +13,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -134,6 +135,7 @@ export function InputBox({
   onStop?: () => void;
 }) {
   const { t } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const { models } = useModels();
@@ -487,10 +489,26 @@ export function InputBox({
           <PromptInputTools className="flex-1 flex-wrap gap-0.5">
             {(
               [
-                { mode: "flash" as InputMode, label: t.inputBox.flashMode, Icon: ZapIcon },
-                { mode: "thinking" as InputMode, label: t.inputBox.reasoningMode, Icon: LightbulbIcon },
-                { mode: "pro" as InputMode, label: t.inputBox.proMode, Icon: GraduationCapIcon },
-                { mode: "ultra" as InputMode, label: t.inputBox.ultraMode, Icon: RocketIcon },
+                {
+                  mode: "flash" as InputMode,
+                  label: t.inputBox.flashMode,
+                  Icon: ZapIcon,
+                },
+                {
+                  mode: "thinking" as InputMode,
+                  label: t.inputBox.reasoningMode,
+                  Icon: LightbulbIcon,
+                },
+                {
+                  mode: "pro" as InputMode,
+                  label: t.inputBox.proMode,
+                  Icon: GraduationCapIcon,
+                },
+                {
+                  mode: "ultra" as InputMode,
+                  label: t.inputBox.ultraMode,
+                  Icon: RocketIcon,
+                },
               ] as const
             ).map(({ mode, label, Icon }) => (
               <ModeHoverGuide key={mode} mode={mode} showTitle={false}>
@@ -498,7 +516,7 @@ export function InputBox({
                   type="button"
                   onClick={() => handleModeSelect(mode)}
                   className={cn(
-                    "flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-all duration-200 whitespace-nowrap",
+                    "flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs font-medium whitespace-nowrap transition-all duration-200",
                     context.mode === mode
                       ? "border border-blue-300 bg-blue-50 text-blue-600 dark:border-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
                       : "text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800/50",
@@ -511,6 +529,15 @@ export function InputBox({
             ))}
           </PromptInputTools>
           <PromptInputTools>
+            {!isNewThread && (
+              <Tooltip content="新建会话">
+                <PromptInputButton
+                  onClick={() => router.push("/workspace/chats/new")}
+                >
+                  <PlusIcon className="size-4" />
+                </PromptInputButton>
+              </Tooltip>
+            )}
             <AddAttachmentsButton className="px-2!" />
             <ModelSelector
               open={modelDialogOpen}
@@ -558,11 +585,7 @@ export function InputBox({
             />
           </PromptInputTools>
         </PromptInputFooter>
-        {!isNewThread && (
-          <div className="bg-background absolute right-0 -bottom-[17px] left-0 z-0 h-4"></div>
-        )}
       </PromptInput>
-
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>

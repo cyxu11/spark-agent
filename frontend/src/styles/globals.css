@@ -408,13 +408,12 @@
    chats list, agents gallery, and settings dialog so those surfaces
    feel continuous with the landing / new-thread page. */
 .portal-surface {
-  background: linear-gradient(
-    135deg,
-    #cce8ff 0%,
-    #dff0ff 30%,
-    #eef7ff 60%,
-    #f7fbff 100%
-  );
+  background: url('/images/index-bg2.png') no-repeat center;
+  background-size: cover;
+}
+
+.portal-surface::before {
+  display: none;
 }
 
 .dark .portal-surface {

@@ -16,7 +16,7 @@ from langchain.agents.middleware.types import (
     ModelRequest,
     ModelResponse,
 )
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.errors import GraphBubbleUp
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,67 @@ _AUTH_PATTERNS = (
     "无权",
     "未授权",
 )
+_BODY_TOO_LARGE_PATTERNS = (
+    "exceeded limit on max bytes to request body",
+    "request body too large",
+    "request entity too large",
+    "range of input length should be",
+    "input length should be",
+)
+_BODY_TOO_LARGE_TRUNCATE_RATIO = 0.5  # Keep this fraction of messages on each truncation attempt
+
+
+def _is_body_too_large(exc: BaseException) -> bool:
+    """Check if the error is a request body size limit error."""
+    detail = _extract_error_detail(exc).lower()
+    return _matches_any(detail, _BODY_TOO_LARGE_PATTERNS)
+
+
+def _truncate_messages(request: ModelRequest, ratio: float = _BODY_TOO_LARGE_TRUNCATE_RATIO) -> ModelRequest | None:
+    """Truncate conversation messages to reduce request body size.
+
+    Keeps the system message (if any) and the most recent messages,
+    dropping older messages from the middle. When conversation messages
+    cannot be truncated further, truncates the system prompt content.
+    Returns None if nothing can be truncated.
+    """
+    messages = list(request.messages)
+
+    # Separate system messages from conversation messages
+    system_msgs = [m for m in messages if isinstance(m, SystemMessage)]
+    conv_msgs = [m for m in messages if not isinstance(m, SystemMessage)]
+
+    # Try truncating conversation messages first
+    if len(conv_msgs) > 1:
+        keep_count = max(1, int(len(conv_msgs) * ratio))
+        if keep_count < len(conv_msgs):
+            truncated = system_msgs + conv_msgs[-keep_count:]
+            logger.info(
+                "Truncating conversation from %d to %d messages (kept %d system + %d recent) to fit provider body size limit",
+                len(messages),
+                len(truncated),
+                len(system_msgs),
+                keep_count,
+            )
+            return request.override(messages=truncated)
+
+    # Conversation can't be truncated further — try truncating system prompt
+    if system_msgs:
+        sys_msg = system_msgs[0]
+        content = sys_msg.content if isinstance(sys_msg.content, str) else str(sys_msg.content)
+        target_len = int(len(content) * ratio)
+        if target_len < len(content) and target_len > 100:
+            truncated_content = content[:target_len] + "\n\n[System prompt truncated to fit provider input limit]"
+            new_sys = SystemMessage(content=truncated_content)
+            truncated = [new_sys] + conv_msgs
+            logger.info(
+                "Truncating system prompt from %d to %d chars to fit provider body size limit",
+                len(content),
+                len(truncated_content),
+            )
+            return request.override(messages=truncated)
+
+    return None
 
 
 class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
@@ -66,6 +127,7 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
     retry_max_attempts: int = 3
     retry_base_delay_ms: int = 1000
     retry_cap_delay_ms: int = 8000
+    body_truncate_max_attempts: int = 3
 
     def _classify_error(self, exc: BaseException) -> tuple[bool, str]:
         detail = _extract_error_detail(exc)
@@ -139,13 +201,19 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
         handler: Callable[[ModelRequest], ModelResponse],
     ) -> ModelCallResult:
         attempt = 1
+        truncate_attempt = 0
         while True:
             try:
                 return handler(request)
             except GraphBubbleUp:
-                # Preserve LangGraph control-flow signals (interrupt/pause/resume).
                 raise
             except Exception as exc:
+                if _is_body_too_large(exc) and truncate_attempt < self.body_truncate_max_attempts:
+                    truncated = _truncate_messages(request, _BODY_TOO_LARGE_TRUNCATE_RATIO ** (truncate_attempt + 1))
+                    if truncated is not None:
+                        truncate_attempt += 1
+                        request = truncated
+                        continue
                 retriable, reason = self._classify_error(exc)
                 if retriable and attempt < self.retry_max_attempts:
                     wait_ms = self._build_retry_delay_ms(attempt, exc)
@@ -175,13 +243,19 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
         handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
     ) -> ModelCallResult:
         attempt = 1
+        truncate_attempt = 0
         while True:
             try:
                 return await handler(request)
             except GraphBubbleUp:
-                # Preserve LangGraph control-flow signals (interrupt/pause/resume).
                 raise
             except Exception as exc:
+                if _is_body_too_large(exc) and truncate_attempt < self.body_truncate_max_attempts:
+                    truncated = _truncate_messages(request, _BODY_TOO_LARGE_TRUNCATE_RATIO ** (truncate_attempt + 1))
+                    if truncated is not None:
+                        truncate_attempt += 1
+                        request = truncated
+                        continue
                 retriable, reason = self._classify_error(exc)
                 if retriable and attempt < self.retry_max_attempts:
                     wait_ms = self._build_retry_delay_ms(attempt, exc)

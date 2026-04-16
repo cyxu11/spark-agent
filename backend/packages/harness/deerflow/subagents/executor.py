@@ -176,6 +176,15 @@ class SubagentExecutor:
         # Reuse shared middleware composition with lead agent.
         middlewares = build_subagent_runtime_middlewares(lazy_init=True)
 
+        # Add summarization middleware for subagents to prevent context overflow
+        try:
+            from deerflow.agents.lead_agent.agent import _create_summarization_middleware
+            summarization_mw = _create_summarization_middleware()
+            if summarization_mw is not None:
+                middlewares.append(summarization_mw)
+        except Exception:
+            pass  # summarization is optional
+
         # Inject the current date so reports / writeups produced by the
         # subagent aren't anchored to the model's pretraining year.  The
         # lead agent already appends this tag in ``prompt.py``; subagents

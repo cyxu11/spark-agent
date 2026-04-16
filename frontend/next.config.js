@@ -54,14 +54,26 @@ const config = {
     }
 
     if (!process.env.NEXT_PUBLIC_BACKEND_BASE_URL) {
-      rewrites.push({
-        source: "/api/agents",
-        destination: `${gatewayURL}/api/agents`,
-      });
-      rewrites.push({
-        source: "/api/agents/:path*",
-        destination: `${gatewayURL}/api/agents/:path*`,
-      });
+      // 代理所有 gateway API 路径
+      const gatewayPaths = [
+        "agents",
+        "models",
+        "threads",
+        "skills",
+        "mcp",
+        "memory",
+        "suggestions",
+      ];
+      for (const p of gatewayPaths) {
+        rewrites.push({
+          source: `/api/${p}`,
+          destination: `${gatewayURL}/api/${p}`,
+        });
+        rewrites.push({
+          source: `/api/${p}/:path*`,
+          destination: `${gatewayURL}/api/${p}/:path*`,
+        });
+      }
     }
 
     return rewrites;
