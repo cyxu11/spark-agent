@@ -21,6 +21,105 @@ _SYNC_TOOL_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=10, thre
 # Register shutdown hook for the global executor
 atexit.register(lambda: _SYNC_TOOL_EXECUTOR.shutdown(wait=False))
 
+# Maximum characters allowed in MCP tool output to prevent LLM request body overflow
+_MCP_OUTPUT_MAX_CHARS = 10000
+
+
+def _truncate_mcp_output(output: Any, max_chars: int = _MCP_OUTPUT_MAX_CHARS) -> Any:
+    """Truncate MCP tool output to prevent exceeding LLM request body limits.
+
+    Handles multiple output formats:
+    - Simple string: truncate directly
+    - Tuple (content_blocks, artifact): truncate text inside content blocks
+    - List of content blocks: truncate text inside each block
+
+    Uses middle truncation to preserve both head and tail context.
+    """
+    if max_chars == 0:
+        return output
+
+    # Handle simple string
+    if isinstance(output, str):
+        if len(output) <= max_chars:
+            return output
+        skipped = len(output) - max_chars
+        head_len = max_chars // 2
+        tail_len = max_chars - head_len
+        marker = f"\n... [MCP output truncated: {skipped} chars skipped, total {len(output)} chars] ...\n"
+        return f"{output[:head_len]}{marker}{output[-tail_len:]}"
+
+    # Handle tuple (content_blocks, artifact) from response_format="content_and_artifact"
+    if isinstance(output, tuple) and len(output) == 2:
+        content, artifact = output
+        truncated_content = _truncate_content_blocks(content, max_chars)
+        return (truncated_content, artifact)
+
+    # Handle list of content blocks
+    if isinstance(output, list):
+        return _truncate_content_blocks(output, max_chars)
+
+    return output
+
+
+def _truncate_content_blocks(content: Any, max_chars: int) -> Any:
+    """Truncate text within content blocks (list of dicts with 'text' fields)."""
+    if not isinstance(content, list):
+        return content
+
+    # Calculate total text size across all blocks
+    total_text_len = 0
+    text_blocks = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str):
+            total_text_len += len(block["text"])
+            text_blocks.append(block)
+
+    if total_text_len <= max_chars or not text_blocks:
+        return content
+
+    # Distribute the max_chars budget across text blocks proportionally
+    result = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str):
+            text = block["text"]
+            # Allocate chars proportionally to this block's share of total text
+            block_budget = max(500, int(max_chars * len(text) / total_text_len))
+            if len(text) > block_budget:
+                skipped = len(text) - block_budget
+                head_len = block_budget // 2
+                tail_len = block_budget - head_len
+                marker = f"\n... [MCP output truncated: {skipped} chars skipped, total {len(text)} chars] ...\n"
+                truncated_text = f"{text[:head_len]}{marker}{text[-tail_len:]}"
+                result.append({**block, "text": truncated_text})
+            else:
+                result.append(block)
+        else:
+            result.append(block)
+
+    return result
+
+
+def _make_async_tool_wrapper(coro: Callable[..., Any], tool_name: str) -> Callable[..., Any]:
+    """Build an async wrapper that truncates MCP tool output.
+
+    Args:
+        coro: The tool's original asynchronous coroutine.
+        tool_name: Name of the tool (for logging).
+
+    Returns:
+        An async function that truncates oversized output.
+    """
+
+    async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            result = await coro(*args, **kwargs)
+            return _truncate_mcp_output(result)
+        except Exception as e:
+            logger.error(f"Error invoking MCP tool '{tool_name}' via async wrapper: {e}", exc_info=True)
+            raise
+
+    return async_wrapper
+
 
 def _make_sync_tool_wrapper(coro: Callable[..., Any], tool_name: str) -> Callable[..., Any]:
     """Build a synchronous wrapper for an asynchronous tool coroutine.
@@ -43,9 +142,10 @@ def _make_sync_tool_wrapper(coro: Callable[..., Any], tool_name: str) -> Callabl
             if loop is not None and loop.is_running():
                 # Use global executor to avoid nested loop issues and improve performance
                 future = _SYNC_TOOL_EXECUTOR.submit(asyncio.run, coro(*args, **kwargs))
-                return future.result()
+                result = future.result()
             else:
-                return asyncio.run(coro(*args, **kwargs))
+                result = asyncio.run(coro(*args, **kwargs))
+            return _truncate_mcp_output(result)
         except Exception as e:
             logger.error(f"Error invoking MCP tool '{tool_name}' via sync wrapper: {e}", exc_info=True)
             raise
@@ -117,10 +217,15 @@ async def get_mcp_tools() -> list[BaseTool]:
             tools.extend(server_tools)
         logger.info(f"Successfully loaded {len(tools)} tool(s) from MCP servers")
 
-        # Patch tools to support sync invocation, as deerflow client streams synchronously
+        # Patch tools to truncate output and support sync invocation
         for tool in tools:
-            if getattr(tool, "func", None) is None and getattr(tool, "coroutine", None) is not None:
-                tool.func = _make_sync_tool_wrapper(tool.coroutine, tool.name)
+            original_coro = getattr(tool, "coroutine", None)
+            if original_coro is not None:
+                # Wrap async coroutine to truncate output
+                tool.coroutine = _make_async_tool_wrapper(original_coro, tool.name)
+                # Also provide a sync wrapper for deerflow client streaming
+                if getattr(tool, "func", None) is None:
+                    tool.func = _make_sync_tool_wrapper(tool.coroutine, tool.name)
 
         return tools
 

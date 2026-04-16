@@ -35,19 +35,22 @@ export function Welcome({
   return (
     <div
       className={cn(
-        "mx-auto flex w-full flex-col items-start justify-center gap-1 px-2 py-6",
+        "mx-auto flex w-full flex-col items-center justify-center gap-0 px-2 py-6",
         className,
       )}
     >
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-        {t.welcome.title}
-      </h1>
-      <p className="text-lg text-gray-600 dark:text-gray-400">
-        {t.welcome.subtitlePrefix}
-        <span className="font-medium text-blue-500">
-          {t.welcome.subtitleHighlight}
-        </span>
-      </p>
+      <div
+        className="mb-[26px] h-[56px] w-[384px] bg-contain bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/images/title-bg.svg')" }}
+        role="heading"
+        aria-level={1}
+        aria-label={t.welcome.title}
+      />
+      <div
+        className="mb-[40px] h-[30px] w-[448px] bg-contain bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/images/desc-bg.svg')" }}
+        aria-label={t.welcome.subtitlePrefix}
+      />
     </div>
   );
 }

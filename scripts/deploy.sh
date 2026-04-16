@@ -56,6 +56,13 @@ esac
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Load environment variables from .env file
+if [ -f "$REPO_ROOT/.env" ]; then
+    set -a
+    source "$REPO_ROOT/.env"
+    set +a
+fi
+
 DOCKER_DIR="$REPO_ROOT/docker"
 
 # Resolve the compose binary: prefer the v2 plugin (`docker compose`) but
@@ -262,10 +269,10 @@ case "$RUNTIME_MODE" in
     gateway)
         export LANGGRAPH_UPSTREAM=gateway:8001
         export LANGGRAPH_REWRITE=/api/
-        services="frontend gateway nginx"
+        services="frontend gateway"
         ;;
     standard)
-        services="frontend gateway langgraph nginx"
+        services="frontend gateway langgraph"
         ;;
 esac
 
@@ -305,6 +312,97 @@ else
     # shellcheck disable=SC2086
     "${COMPOSE_CMD[@]}" up --build -d --remove-orphans $services
 fi
+
+# ── Sync local code into containers ──────────────────────────────────────────
+# Images may be stale (Docker Hub unreachable, no rebuild). Always sync the
+# latest backend source and frontend release into running containers so that
+# `deploy.sh start` is guaranteed to run the newest code.
+
+echo ""
+echo -e "${BLUE}Syncing latest code into containers...${NC}"
+
+_sync_backend() {
+    local container="$1"
+    if ! docker ps --format '{{.Names}}' | grep -qx "$container"; then
+        return
+    fi
+    local src="$REPO_ROOT/backend/packages/harness/deerflow"
+    local dst="/app/backend/packages/harness/deerflow"
+    # Sync all modified Python files
+    for rel_path in \
+        agents/lead_agent/agent.py \
+        agents/middlewares/llm_error_handling_middleware.py \
+        agents/middlewares/event_log_middleware.py \
+        subagents/executor.py \
+        mcp/tools.py; do
+        if [ -f "$src/$rel_path" ]; then
+            docker cp "$src/$rel_path" "$container:$dst/$rel_path"
+        fi
+    done
+}
+
+_sync_backend deer-flow-langgraph
+_sync_backend deer-flow-gateway
+echo -e "${GREEN}✓ Backend code synced${NC}"
+
+# Sync frontend release if available
+_sync_frontend() {
+    local container="deer-flow-frontend"
+    if ! docker ps --format '{{.Names}}' | grep -qx "$container"; then
+        return
+    fi
+    # Find the latest frontend release tarball
+    local releases_dir="$REPO_ROOT/releases"
+    if [ ! -d "$releases_dir" ]; then
+        return
+    fi
+    local latest
+    latest=$(ls -t "$releases_dir"/frontend-*.tar.gz 2>/dev/null | head -1)
+    if [ -z "$latest" ]; then
+        return
+    fi
+    local version
+    version=$(basename "$latest" | sed 's/frontend-//;s/.tar.gz//')
+    echo -e "${BLUE}Deploying frontend $version...${NC}"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    tar -xzf "$latest" -C "$tmpdir" 2>/dev/null
+    # Clear old build and copy new
+    docker exec "$container" rm -rf /app/frontend/.next
+    docker cp "$tmpdir/.next" "$container:/app/frontend/"
+    docker cp "$tmpdir/src" "$container:/app/frontend/"
+    if [ -d "$tmpdir/public" ]; then
+        docker cp "$tmpdir/public" "$container:/app/frontend/"
+    fi
+    if [ -f "$tmpdir/release-info.json" ]; then
+        docker cp "$tmpdir/release-info.json" "$container:/app/frontend/.next/release-info.json"
+    fi
+    rm -rf "$tmpdir"
+
+    # Fix routes-manifest.json to use Docker container names instead of localhost
+    if [ "$RUNTIME_MODE" = "gateway" ]; then
+        docker exec "$container" sh -c "sed -i 's|http://127.0.0.1:2024|http://gateway:8001/api|g' /app/frontend/.next/routes-manifest.json" 2>/dev/null
+        echo -e "${GREEN}✓ Frontend routes patched for gateway mode${NC}"
+    else
+        docker exec "$container" sh -c "sed -i 's|http://127.0.0.1:2024|http://langgraph:2024|g' /app/frontend/.next/routes-manifest.json" 2>/dev/null
+        docker exec "$container" sh -c "sed -i 's|http://127.0.0.1:8001|http://gateway:8001|g' /app/frontend/.next/routes-manifest.json" 2>/dev/null
+        echo -e "${GREEN}✓ Frontend routes patched for standard mode${NC}"
+    fi
+
+    echo -e "${GREEN}✓ Frontend $version deployed${NC}"
+}
+
+_sync_frontend
+
+# Restart containers to pick up synced code
+echo -e "${BLUE}Restarting containers to apply changes...${NC}"
+for svc in deer-flow-langgraph deer-flow-gateway deer-flow-frontend; do
+    if docker ps --format '{{.Names}}' | grep -qx "$svc"; then
+        docker restart "$svc" >/dev/null 2>&1
+    fi
+done
+sleep 5
+echo -e "${GREEN}✓ All containers restarted${NC}"
 
 echo ""
 echo "=========================================="

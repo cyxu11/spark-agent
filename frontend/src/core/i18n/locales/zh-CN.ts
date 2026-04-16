@@ -66,9 +66,9 @@ export const zhCN: Translations = {
     greeting: "你好，欢迎回来！",
     description:
       "欢迎使用 Spark-Agent，一个完全开源的超级智能体。通过内置和自定义的 Skills，\nSpark-Agent 可以帮你搜索网络、分析数据，还能为你生成幻灯片、\n图片、视频、播客及网页等，几乎可以做任何事情。",
-    title: "星火行业大师",
-    subtitlePrefix: "行业信息，一问即答，",
-    subtitleHighlight: "深度研究",
+    title: "数链智研平台",
+    subtitlePrefix: "行业信息，一问即答，深度研究",
+    subtitleHighlight: "",
 
     createYourOwnSkill: "创建你自己的 Agent SKill",
     createYourOwnSkillDescription:
@@ -85,17 +85,20 @@ export const zhCN: Translations = {
 
   // Input Box
   inputBox: {
-    placeholder: "今天我能为你做些什么？",
+    placeholder: "向我提问试试吧",
     createSkillPrompt:
       "我们一起用 skill-creator 技能来创建一个技能吧。先问问我希望这个技能能做什么。",
     addAttachments: "添加附件",
     mode: "模式",
     flashMode: "交易问答",
-    flashModeDescription: "针对交易相关问题快速解答，适合行情查询、交易规则等即时问答场景",
+    flashModeDescription:
+      "针对交易相关问题快速解答，适合行情查询、交易规则等即时问答场景",
     reasoningMode: "深度思考",
-    reasoningModeDescription: "对复杂问题进行多维度推理，适合需要逻辑判断与深层分析的投研场景",
+    reasoningModeDescription:
+      "对复杂问题进行多维度推理，适合需要逻辑判断与深层分析的投研场景",
     proMode: "深度分析",
-    proModeDescription: "系统性拆解研究课题，结合数据与逻辑输出结构化分析结论，适合行业与公司深度研究",
+    proModeDescription:
+      "系统性拆解研究课题，结合数据与逻辑输出结构化分析结论，适合行业与公司深度研究",
     ultraMode: "研报生成",
     ultraModeDescription:
       "多智能体协同完成完整研究报告，覆盖行业洞察、数据分析与投资建议，适合生成专业级研报",
