@@ -285,42 +285,53 @@ class SubagentExecutor:
                         result.completed_at = datetime.now()
                 return result
 
-            async for chunk in agent.astream(state, config=run_config, context=context, stream_mode="values"):  # type: ignore[arg-type]
-                # Cooperative cancellation: check if parent requested stop.
-                # Note: cancellation is only detected at astream iteration boundaries,
-                # so long-running tool calls within a single iteration will not be
-                # interrupted until the next chunk is yielded.
-                if result.cancel_event.is_set():
-                    logger.info(f"[trace={self.trace_id}] Subagent {self.config.name} cancelled by parent")
-                    with _background_tasks_lock:
-                        if result.status == SubagentStatus.RUNNING:
-                            result.status = SubagentStatus.CANCELLED
-                            result.error = "Cancelled by user"
-                            result.completed_at = datetime.now()
-                    return result
+            try:
+                async for chunk in agent.astream(state, config=run_config, context=context, stream_mode="values"):  # type: ignore[arg-type]
+                    # Cooperative cancellation: check if parent requested stop.
+                    # Note: cancellation is only detected at astream iteration boundaries,
+                    # so long-running tool calls within a single iteration will not be
+                    # interrupted until the next chunk is yielded.
+                    if result.cancel_event.is_set():
+                        logger.info(f"[trace={self.trace_id}] Subagent {self.config.name} cancelled by parent")
+                        with _background_tasks_lock:
+                            if result.status == SubagentStatus.RUNNING:
+                                result.status = SubagentStatus.CANCELLED
+                                result.error = "Cancelled by user"
+                                result.completed_at = datetime.now()
+                        return result
 
-                final_state = chunk
+                    final_state = chunk
 
-                # Extract AI messages from the current state
-                messages = chunk.get("messages", [])
-                if messages:
-                    last_message = messages[-1]
-                    # Check if this is a new AI message
-                    if isinstance(last_message, AIMessage):
-                        # Convert message to dict for serialization
-                        message_dict = last_message.model_dump()
-                        # Only add if it's not already in the list (avoid duplicates)
-                        # Check by comparing message IDs if available, otherwise compare full dict
-                        message_id = message_dict.get("id")
-                        is_duplicate = False
-                        if message_id:
-                            is_duplicate = any(msg.get("id") == message_id for msg in result.ai_messages)
-                        else:
-                            is_duplicate = message_dict in result.ai_messages
+                    # Extract AI messages from the current state
+                    messages = chunk.get("messages", [])
+                    if messages:
+                        last_message = messages[-1]
+                        # Check if this is a new AI message
+                        if isinstance(last_message, AIMessage):
+                            # Convert message to dict for serialization
+                            message_dict = last_message.model_dump()
+                            # Only add if it's not already in the list (avoid duplicates)
+                            # Check by comparing message IDs if available, otherwise compare full dict
+                            message_id = message_dict.get("id")
+                            is_duplicate = False
+                            if message_id:
+                                is_duplicate = any(msg.get("id") == message_id for msg in result.ai_messages)
+                            else:
+                                is_duplicate = message_dict in result.ai_messages
 
-                        if not is_duplicate:
-                            result.ai_messages.append(message_dict)
-                            logger.info(f"[trace={self.trace_id}] Subagent {self.config.name} captured AI message #{len(result.ai_messages)}")
+                            if not is_duplicate:
+                                result.ai_messages.append(message_dict)
+                                logger.info(f"[trace={self.trace_id}] Subagent {self.config.name} captured AI message #{len(result.ai_messages)}")
+            except Exception as stream_err:
+                # When recursion limit is hit, preserve whatever results we have
+                # so the parent agent can continue with partial output.
+                err_name = type(stream_err).__name__
+                if "RecursionError" in err_name or "GraphRecursionError" in err_name:
+                    logger.warning(
+                        f"[trace={self.trace_id}] Subagent {self.config.name} hit recursion limit, preserving partial results"
+                    )
+                else:
+                    raise
 
             logger.info(f"[trace={self.trace_id}] Subagent {self.config.name} completed async execution")
 

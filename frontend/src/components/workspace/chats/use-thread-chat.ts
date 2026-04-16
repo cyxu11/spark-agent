@@ -18,9 +18,13 @@ export function useThreadChat() {
     () => threadIdFromPath === "new",
   );
 
+  // Track if isNewThread was manually set to false (e.g., by onStart callback)
+  const [manuallySetNotNew, setManuallySetNotNew] = useState(false);
+
   useEffect(() => {
     if (pathname.endsWith("/new")) {
       setIsNewThread(true);
+      setManuallySetNotNew(false);
       setThreadId(uuid());
       return;
     }
@@ -32,9 +36,23 @@ export function useThreadChat() {
     if (threadIdFromPath === "new") {
       return;
     }
-    setIsNewThread(false);
-    setThreadId(threadIdFromPath);
-  }, [pathname, threadIdFromPath]);
+    // Don't override if manually set to false
+    if (!manuallySetNotNew) {
+      setIsNewThread(false);
+      setThreadId(threadIdFromPath);
+    }
+  }, [pathname, threadIdFromPath, manuallySetNotNew]);
+
   const isMock = searchParams.get("mock") === "true";
-  return { threadId, setThreadId, isNewThread, setIsNewThread, isMock };
+
+  // Wrap setIsNewThread to track manual changes
+  const wrappedSetIsNewThread = (value: boolean | ((prev: boolean) => boolean)) => {
+    setIsNewThread(value);
+    const newValue = typeof value === "function" ? value(isNewThread) : value;
+    if (!newValue) {
+      setManuallySetNotNew(true);
+    }
+  };
+
+  return { threadId, setThreadId, isNewThread, setIsNewThread: wrappedSetIsNewThread, isMock };
 }

@@ -46,6 +46,7 @@ export default function ChatPage() {
     useThreadChat();
   const [settings, setSettings] = useThreadSettings(threadId);
   const [mounted, setMounted] = useState(false);
+  const [hideWelcome, setHideWelcome] = useState(false);
   useSpecificChatMode();
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function ChatPage() {
     onStart: (createdThreadId) => {
       setThreadId(createdThreadId);
       setIsNewThread(false);
+      setHideWelcome(false); // Reset for next new thread
       history.replaceState(null, "", `/workspace/chats/${createdThreadId}`);
     },
     onFinish: (state) => {
@@ -83,6 +85,8 @@ export default function ChatPage() {
 
   const handleSubmit = useCallback(
     (message: PromptInputMessage) => {
+      // Hide welcome immediately when user submits (before server responds)
+      setHideWelcome(true);
       void sendMessage(threadId, message);
     },
     [sendMessage, threadId],
@@ -140,7 +144,9 @@ export default function ChatPage() {
               <div
                 className={cn(
                   "relative w-full",
-                  isNewThread && "-translate-y-[calc(50vh-110px)]",
+                  isNewThread &&
+                    !hideWelcome &&
+                    "-translate-y-[calc(50vh-110px)]",
                   "max-w-(--container-width-md)",
                 )}
               >
@@ -170,7 +176,8 @@ export default function ChatPage() {
                     }
                     context={settings.context}
                     extraHeader={
-                      isNewThread && <Welcome mode={settings.context.mode} />
+                      isNewThread &&
+                      !hideWelcome && <Welcome mode={settings.context.mode} />
                     }
                     disabled={
                       env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" ||

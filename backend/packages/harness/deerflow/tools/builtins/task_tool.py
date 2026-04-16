@@ -77,6 +77,17 @@ async def task_tool(
         overrides["system_prompt"] = config.system_prompt + "\n\n" + skills_section
 
     if max_turns is not None:
+        # Enforce minimum max_turns to prevent LLM from setting too low values
+        # that cause premature recursion limit errors
+        MIN_MAX_TURNS = 100
+        if max_turns < MIN_MAX_TURNS:
+            logger.warning(
+                "LLM requested max_turns=%d for subagent '%s', enforcing minimum %d",
+                max_turns,
+                subagent_type,
+                MIN_MAX_TURNS,
+            )
+            max_turns = MIN_MAX_TURNS
         overrides["max_turns"] = max_turns
 
     if overrides:

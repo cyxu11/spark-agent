@@ -312,14 +312,26 @@ export function useThreadStream({
   const sendInFlightRef = useRef(false);
   // Track message count before sending so we know when server has responded
   const prevMsgCountRef = useRef(thread.messages.length);
+  // Track the threadId for which optimistic messages were created
+  const optimisticThreadIdRef = useRef<string | null>(null);
 
   // Reset thread-local pending UI state when switching between threads so
   // optimistic messages and in-flight guards do not leak across chat views.
+  // Only clear optimistic messages if we're switching to a different thread
+  // (not when threadId changes from undefined to a real ID during creation).
   useEffect(() => {
     startedRef.current = false;
-    sendInFlightRef.current = false;
     prevMsgCountRef.current = 0;
-    setOptimisticMessages([]);
+
+    // Clear optimistic messages only if switching to a completely different thread
+    if (
+      threadId !== optimisticThreadIdRef.current &&
+      optimisticThreadIdRef.current !== null
+    ) {
+      setOptimisticMessages([]);
+      sendInFlightRef.current = false;
+      optimisticThreadIdRef.current = null;
+    }
     setIsUploading(false);
   }, [threadId]);
 
@@ -330,6 +342,7 @@ export function useThreadStream({
       thread.messages.length > prevMsgCountRef.current
     ) {
       setOptimisticMessages([]);
+      optimisticThreadIdRef.current = null;
     }
   }, [thread.messages.length, optimisticMessages.length]);
 
@@ -385,6 +398,7 @@ export function useThreadStream({
         });
       }
       setOptimisticMessages(newOptimistic);
+      optimisticThreadIdRef.current = threadId;
 
       // Only fire onStart immediately for an existing persisted thread.
       // Brand-new chats should wait for onCreated(meta.thread_id) so URL sync
