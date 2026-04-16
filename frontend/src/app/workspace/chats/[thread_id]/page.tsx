@@ -84,9 +84,14 @@ export default function ChatPage() {
 
   const handleSubmit = useCallback(
     (message: PromptInputMessage) => {
+      // Flip layout out of welcome-page mode immediately so the optimistic
+      // human message renders inside the normal conversation layout instead
+      // of the centered/translated new-thread layout. URL sync still waits
+      // for onCreated to receive the real server-generated thread_id.
+      if (isNewThread) setIsNewThread(false);
       void sendMessage(threadId, message);
     },
-    [sendMessage, threadId],
+    [sendMessage, threadId, isNewThread, setIsNewThread],
   );
   const handleStop = useCallback(async () => {
     await thread.stop();
