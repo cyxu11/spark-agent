@@ -17,6 +17,7 @@ from app.gateway.routers import (
     models,
     run_events,
     runs,
+    scheduled_tasks,
     skills,
     suggestions,
     thread_runs,
@@ -166,6 +167,10 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
                 "name": "run-events",
                 "description": "Query and stream persisted SSE events for runs and threads",
             },
+            {
+                "name": "scheduled-tasks",
+                "description": "Create and manage scheduled tasks with cron-based execution",
+            },
         ],
     )
 
@@ -216,6 +221,9 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
 
     # Thread HTML report export sharing
     app.include_router(exports.router)
+
+    # Scheduled Tasks API
+    app.include_router(scheduled_tasks.router)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict:
