@@ -3,6 +3,7 @@ from typing import Annotated
 
 from langchain.tools import InjectedToolCallId, tool
 from langchain_core.messages import ToolMessage
+from langgraph.graph import END
 from langgraph.types import Command
 
 _PREVIEW_MARKER = "__scheduled_task_preview__"
@@ -44,5 +45,6 @@ def scheduled_task_tool(
                     tool_call_id=tool_call_id,
                 )
             ]
-        }
+        },
+        goto=END,
     )
