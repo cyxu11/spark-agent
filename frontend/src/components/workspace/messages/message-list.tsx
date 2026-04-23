@@ -13,6 +13,7 @@ import {
   hasContent,
   hasPresentFiles,
   hasReasoning,
+  isScheduledTaskToolMessage,
 } from "@/core/messages/utils";
 import { useRehypeSplitWordsIntoSpans } from "@/core/rehype";
 import type { Subtask } from "@/core/tasks";
@@ -28,6 +29,7 @@ import { MessageGroup } from "./message-group";
 import { MessageListItem } from "./message-list-item";
 import { MessageListSkeleton } from "./skeleton";
 import { SubtaskCard } from "./subtask-card";
+import { ScheduledTaskPreviewCard } from "../scheduled-tasks/task-preview-card";
 
 export const MESSAGE_LIST_DEFAULT_PADDING_BOTTOM = 160;
 export const MESSAGE_LIST_FOLLOWUPS_EXTRA_PADDING_BOTTOM = 80;
@@ -78,6 +80,12 @@ export function MessageList({
                   rehypePlugins={rehypePlugins}
                 />
               );
+            }
+            return null;
+          } else if (group.type === "assistant:scheduled-task") {
+            const message = group.messages[0];
+            if (message && isScheduledTaskToolMessage(message)) {
+              return <ScheduledTaskPreviewCard key={group.id} message={message} />;
             }
             return null;
           } else if (group.type === "assistant:present-files") {

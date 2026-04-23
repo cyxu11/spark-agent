@@ -18,13 +18,16 @@ interface AssistantClarificationGroup extends GenericMessageGroup<"assistant:cla
 
 interface AssistantSubagentGroup extends GenericMessageGroup<"assistant:subagent"> {}
 
+interface AssistantScheduledTaskGroup extends GenericMessageGroup<"assistant:scheduled-task"> {}
+
 type MessageGroup =
   | HumanMessageGroup
   | AssistantProcessingGroup
   | AssistantMessageGroup
   | AssistantPresentFilesGroup
   | AssistantClarificationGroup
-  | AssistantSubagentGroup;
+  | AssistantSubagentGroup
+  | AssistantScheduledTaskGroup;
 
 export function groupMessages<T>(
   messages: Message[],
@@ -66,7 +69,14 @@ export function groupMessages<T>(
     }
 
     if (message.type === "tool") {
-      if (isClarificationToolMessage(message)) {
+      if (isScheduledTaskToolMessage(message)) {
+        lastOpenGroup()?.messages.push(message);
+        groups.push({
+          id: message.id,
+          type: "assistant:scheduled-task",
+          messages: [message],
+        });
+      } else if (isClarificationToolMessage(message)) {
         // Add to the preceding processing group to preserve tool-call association,
         // then also open a standalone clarification group for prominent display.
         lastOpenGroup()?.messages.push(message);
@@ -389,4 +399,15 @@ export function parseUploadedFiles(content: string): FileInMessage[] {
   }
 
   return files;
+}
+
+export function isScheduledTaskToolMessage(message: Message): boolean {
+  if (message.type !== "tool" || message.name !== "create_scheduled_task") return false;
+  try {
+    const raw = typeof message.content === "string" ? message.content : "{}";
+    const data = JSON.parse(raw) as { __scheduled_task_preview__?: boolean };
+    return data.__scheduled_task_preview__ === true;
+  } catch {
+    return false;
+  }
 }
