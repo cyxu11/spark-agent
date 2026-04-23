@@ -126,6 +126,15 @@ class Paths:
         """Root directory for all custom agents: `{base_dir}/agents/`."""
         return self.base_dir / "agents"
 
+    @property
+    def scheduled_tasks_dir(self) -> Path:
+        """Root directory for scheduled tasks: `{base_dir}/scheduled_tasks/`."""
+        return self.base_dir / "scheduled_tasks"
+
+    def scheduled_task_dir(self, task_id: str) -> Path:
+        """Directory for a specific scheduled task: `{base_dir}/scheduled_tasks/{task_id}/`."""
+        return self.scheduled_tasks_dir / task_id
+
     def agent_dir(self, name: str) -> Path:
         """Directory for a specific agent: `{base_dir}/agents/{name}/`."""
         return self.agents_dir / name.lower()
