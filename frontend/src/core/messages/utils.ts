@@ -47,7 +47,8 @@ export function groupMessages<T>(
       last &&
       last.type !== "human" &&
       last.type !== "assistant" &&
-      last.type !== "assistant:clarification"
+      last.type !== "assistant:clarification" &&
+      last.type !== "assistant:scheduled-task"
     ) {
       return last;
     }
