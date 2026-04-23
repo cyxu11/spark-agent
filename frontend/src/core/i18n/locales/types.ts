@@ -123,6 +123,33 @@ export interface Translations {
     chats: string;
     demoChats: string;
     agents: string;
+    scheduledTasks: string;
+  };
+
+  // Scheduled Tasks
+  scheduledTasks: {
+    title: string;
+    description: string;
+    empty: string;
+    createTaskTool: string;
+    confirmCreate: string;
+    cancel: string;
+    cronLabel: string;
+    scriptPreview: string;
+    enabled: string;
+    disabled: string;
+    lastRun: string;
+    never: string;
+    viewOutputs: string;
+    deleteTask: string;
+    deleteConfirm: string;
+    outputs: string;
+    download: string;
+    noOutputs: string;
+    status: {
+      success: string;
+      failed: string;
+    };
   };
 
   // Agents

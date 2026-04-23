@@ -179,6 +179,33 @@ export const enUS: Translations = {
     recentChats: "Recent chats",
     demoChats: "Demo chats",
     agents: "行业分析师",
+    scheduledTasks: "Scheduled Tasks",
+  },
+
+  // Scheduled Tasks
+  scheduledTasks: {
+    title: "Scheduled Tasks",
+    description: "Create scheduled tasks through conversation and manage their execution.",
+    empty: "No scheduled tasks yet. Describe a recurring task in chat to create one.",
+    createTaskTool: "Create Scheduled Task",
+    confirmCreate: "Confirm Create",
+    cancel: "Cancel",
+    cronLabel: "Schedule",
+    scriptPreview: "Script Preview",
+    enabled: "Running",
+    disabled: "Stopped",
+    lastRun: "Last run",
+    never: "Never",
+    viewOutputs: "View Outputs",
+    deleteTask: "Delete Task",
+    deleteConfirm: "Are you sure you want to delete this task? All execution records will also be deleted.",
+    outputs: "Execution Records",
+    download: "Download",
+    noOutputs: "No execution records yet",
+    status: {
+      success: "Success",
+      failed: "Failed",
+    },
   },
 
   // Agents

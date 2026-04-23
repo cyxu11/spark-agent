@@ -173,6 +173,33 @@ export const zhCN: Translations = {
     recentChats: "最近的对话",
     demoChats: "演示对话",
     agents: "行业分析师",
+    scheduledTasks: "定时任务",
+  },
+
+  // Scheduled Tasks
+  scheduledTasks: {
+    title: "定时任务",
+    description: "通过对话创建定时任务，自动执行并管理结果。",
+    empty: "暂无定时任务，在对话中描述你的定时任务来创建。",
+    createTaskTool: "创建定时任务",
+    confirmCreate: "确认创建",
+    cancel: "取消",
+    cronLabel: "执行计划",
+    scriptPreview: "脚本预览",
+    enabled: "运行中",
+    disabled: "已停止",
+    lastRun: "上次执行",
+    never: "从未执行",
+    viewOutputs: "查看结果",
+    deleteTask: "删除任务",
+    deleteConfirm: "确定要删除这个定时任务吗？所有执行记录也将一并删除。",
+    outputs: "执行记录",
+    download: "下载",
+    noOutputs: "暂无执行记录",
+    status: {
+      success: "成功",
+      failed: "失败",
+    },
   },
 
   // Agents
