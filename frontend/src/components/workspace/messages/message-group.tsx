@@ -12,7 +12,7 @@ import {
   SquareTerminalIcon,
   WrenchIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ChainOfThought,
@@ -53,8 +53,26 @@ export function MessageGroup({
     env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true",
   );
   const [showLastThinking, setShowLastThinking] = useState(
-    env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true",
+    env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" || isLoading,
   );
+  // 防止自动开合覆盖用户手动操作:用户点过一次后,后续 isLoading 变化不再自动改 showLastThinking
+  const lastThinkingUserToggledRef = useRef(false);
+  // 流式期间保持思考展开;流结束后 1.5s 自动收起(让用户能短暂看到最终思考)
+  useEffect(() => {
+    if (lastThinkingUserToggledRef.current) return;
+    if (isLoading) {
+      setShowLastThinking(true);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setShowLastThinking(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+  const handleLastThinkingToggle = () => {
+    lastThinkingUserToggledRef.current = true;
+    setShowLastThinking((prev) => !prev);
+  };
   const steps = useMemo(() => convertToSteps(messages), [messages]);
   const lastToolCallStep = useMemo(() => {
     const filteredSteps = steps.filter((step) => step.type === "toolCall");
@@ -145,7 +163,7 @@ export function MessageGroup({
             key={lastReasoningStep.id}
             className="w-full items-start justify-start text-left"
             variant="ghost"
-            onClick={() => setShowLastThinking(!showLastThinking)}
+            onClick={handleLastThinkingToggle}
           >
             <div className="flex w-full items-center justify-between">
               <ChainOfThoughtStep
@@ -181,6 +199,22 @@ export function MessageGroup({
       )}
     </ChainOfThought>
   );
+}
+
+/**
+ * Detect whether a file/dir path is an internal skill location.
+ * Covers:
+ *   - Virtual sandbox path:  /mnt/skills/...
+ *   - Host paths inside any project root containing `/skills/public/` or `/skills/custom/`
+ *   - Any path ending in `/SKILL.md`
+ * Used to suppress leaking framework internals to end users in the CoT panel.
+ */
+function isSkillInternalPath(path?: string): boolean {
+  if (!path) return false;
+  if (path.startsWith("/mnt/skills/")) return true;
+  if (path.includes("/skills/public/") || path.includes("/skills/custom/")) return true;
+  if (/\/SKILL\.md$/i.test(path)) return true;
+  return false;
 }
 
 function ToolCall({
@@ -298,15 +332,16 @@ function ToolCall({
       </ChainOfThoughtStep>
     );
   } else if (name === "ls") {
+    const path: string | undefined = (args as { path: string })?.path;
+    const isInternalSkillPath = isSkillInternalPath(path);
     let description: string | undefined = (args as { description: string })
       ?.description;
     if (!description) {
       description = t.toolCalls.listFolder;
     }
-    const path: string | undefined = (args as { path: string })?.path;
     return (
       <ChainOfThoughtStep key={id} label={description} icon={FolderOpenIcon}>
-        {path && (
+        {path && !isInternalSkillPath && (
           <ChainOfThoughtSearchResult className="cursor-pointer">
             {path}
           </ChainOfThoughtSearchResult>
@@ -314,15 +349,16 @@ function ToolCall({
       </ChainOfThoughtStep>
     );
   } else if (name === "read_file") {
+    const { path } = args as { path: string; content: string };
+    const isInternalSkillPath = isSkillInternalPath(path);
     let description: string | undefined = (args as { description: string })
       ?.description;
     if (!description) {
       description = t.toolCalls.readFile;
     }
-    const { path } = args as { path: string; content: string };
     return (
       <ChainOfThoughtStep key={id} label={description} icon={BookOpenTextIcon}>
-        {path && (
+        {path && !isInternalSkillPath && (
           <ChainOfThoughtSearchResult className="cursor-pointer">
             {path}
           </ChainOfThoughtSearchResult>

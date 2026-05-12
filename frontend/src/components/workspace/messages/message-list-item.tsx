@@ -1,5 +1,5 @@
 import type { Message } from "@langchain/langgraph-sdk";
-import { FileIcon, Loader2Icon } from "lucide-react";
+import { FileIcon, LayersIcon, Loader2Icon } from "lucide-react";
 import { memo, useMemo, type ImgHTMLAttributes } from "react";
 import rehypeKatex from "rehype-katex";
 
@@ -15,7 +15,7 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-import { Task, TaskTrigger } from "@/components/ai-elements/task";
+import { Task, TaskContent, TaskTrigger } from "@/components/ai-elements/task";
 import { Badge } from "@/components/ui/badge";
 import { resolveArtifactURL } from "@/core/artifacts/utils";
 import { useI18n } from "@/core/i18n/hooks";
@@ -46,10 +46,13 @@ export function MessageListItem({
   threadId: string;
 }) {
   const isHuman = message.type === "human";
+  // Conversation summary (system-injected HumanMessage) should render with assistant-side styling,
+  // not as a right-aligned user bubble.
+  const isSummary = message.additional_kwargs?.element === "summary";
   return (
     <AIElementMessage
       className={cn("group/conversation-message relative w-full", className)}
-      from={isHuman ? "user" : "assistant"}
+      from={isSummary ? "assistant" : isHuman ? "user" : "assistant"}
     >
       <MessageContent
         className={isHuman ? "w-fit" : "w-full"}
@@ -157,6 +160,34 @@ function MessageContent_({
     files && files.length > 0 ? (
       <RichFilesList files={files} threadId={threadId} />
     ) : null;
+
+  // Conversation summary injected by SummarizationMiddleware (HumanMessage with element="summary"):
+  // render as collapsed card instead of as a regular user bubble.
+  if (message.additional_kwargs?.element === "summary") {
+    const summaryBody = contentToDisplay
+      .replace(/^Here is a summary of the conversation to date:\s*/i, "")
+      .trim();
+    return (
+      <AIElementMessageContent className={className}>
+        <Task defaultOpen={false}>
+          <TaskTrigger title="">
+            <div className="text-muted-foreground flex w-full cursor-pointer items-center gap-2 text-sm select-none">
+              <LayersIcon className="size-4" />
+              <span>已压缩历史对话以节省上下文</span>
+            </div>
+          </TaskTrigger>
+          <TaskContent className="mt-2">
+            <MarkdownContent
+              content={summaryBody}
+              isLoading={false}
+              rehypePlugins={rehypePlugins}
+              className="text-muted-foreground text-sm"
+            />
+          </TaskContent>
+        </Task>
+      </AIElementMessageContent>
+    );
+  }
 
   // Uploading state: mock AI message shown while files upload
   if (message.additional_kwargs?.element === "task") {

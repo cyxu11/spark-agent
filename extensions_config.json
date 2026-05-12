@@ -50,6 +50,17 @@
       "oauth": null,
       "description": "数据搜索服务，提供企业内部数据查询和检索能力"
     },
+    "international-energy-data": {
+      "enabled": true,
+      "type": "sse",
+      "command": null,
+      "args": [],
+      "env": {},
+      "url": "http://127.0.0.1:8065/sse",
+      "headers": {},
+      "oauth": null,
+      "description": "NL2SQL 网关：通过智能体把自然语言转 SQL 并执行，支持国际油气价格走势、全球 LNG 进出口、全球天然气消费等查询。tools: listAgentsToolCallback / nl2SqlToolCallback / executeSqlToolCallback"
+    },
     "filesystem": {
       "enabled": false,
       "type": "stdio",

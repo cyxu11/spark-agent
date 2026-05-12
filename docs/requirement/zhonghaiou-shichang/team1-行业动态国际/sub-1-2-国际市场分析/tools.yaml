@@ -1,0 +1,5 @@
+tools:
+- name: mcp_iflytek_cbm
+  description: 讯飞联网搜索，获取市场新闻、政策、地缘事件等外部资讯
+  service_id: -221
+  call_mode: serial

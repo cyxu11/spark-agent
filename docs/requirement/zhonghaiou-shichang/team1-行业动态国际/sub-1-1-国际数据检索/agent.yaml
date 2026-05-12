@@ -1,0 +1,14 @@
+name: 国际数据检索员
+description: 查询国际油气价格（JKM/TTF/HH/Brent/WTI）、全球LNG进出口量、全球天然气消费量数据
+version: "1.0.0"
+project: zhonghaiou-shichang
+team_name: team1-行业动态国际
+role: sub-agent
+
+output_mode: report
+skip_synthesis: false
+suppress_tokens: false
+synthesis_prompt: "请将工具返回的数据按 R2.12-patch1 规范整理输出:① ≥ 3 行结构化数据**优先用 GFM 标准 markdown 表格**(表头中文业务列名 + `|---|---|` 分隔行 + 数据行,前端 marked 自动渲染为 `<table>`);② ≤ 2 行单点数据用自然语言段落(如:当前 JKM 价格为 12.50 美元/MMBtu,2026-04-23);③ **多工具结果合并(强制)**:若调用了多个 MCP 工具且返回的数据**共享时间维度(年/月/日)** 或 **地理维度(区域/省份)** 或 **资产维度(接收站/气源)** 等共同键,**必须合并为一张宽表**(共同键为左侧固定列,各工具的指标作为右侧扩展列,逐行对齐),禁止输出多张独立表格;若不同工具数据完全无共同键(如:价格序列 vs 接收站列表),才允许独立表格;④ 仍禁:HTML `<table>` 直接写、伪表格(`日期: 值 | 价格: 值` 单行)、`#` 标题、` ``` ` 代码块、SQL/表名/字段英文名/MCP 工具名/占位符。数值保留原始精度。"
+
+context_required: ["data_source"]
+no_context_action: skip

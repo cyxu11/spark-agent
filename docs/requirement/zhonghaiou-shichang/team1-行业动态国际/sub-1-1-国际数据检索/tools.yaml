@@ -1,0 +1,25 @@
+tools:
+- name: mcp_market_gas_prices
+  description: 查询天然气价格数据（HH/TTF/JKM）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_oil_prices
+  description: 查询国际原油价格数据（Brent/WTI）
+  service_id: -302
+  call_mode: serial
+- name: mcp_market_lng_spot
+  description: 查询 LNG 现货价格数据（东北亚/欧洲/北美）
+  service_id: -303
+  call_mode: serial
+- name: mcp_market_lng_trade
+  description: 查询全球LNG进出口量，返回年份、国家、进口/出口、贸易量（万吨）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_gas_cons_global
+  description: 查询全球天然气消费量（分区域），返回年份、区域、消费量（十亿立方米）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_carbon
+  description: 查询全球碳市场价格（EU ETS / China ETS / RGGI 等），返回日期、市场、价格（欧元/吨 或 元/吨）
+  service_id: -301
+  call_mode: serial

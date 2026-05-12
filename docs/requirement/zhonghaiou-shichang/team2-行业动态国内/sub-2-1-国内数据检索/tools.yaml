@@ -1,0 +1,17 @@
+tools:
+- name: mcp_market_lng_listing
+  description: 查询各区域液态LNG挂牌价格（日度，14区域），返回日期、区域、销售单位、挂牌价（元/吨）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_gas_cons_china
+  description: 查询全国天然气消费量（按气液态 LNG/管道气/国产气 + 区域），返回年份、月份、气液态、区域、消费量（亿立方米）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_gas_cons_structure
+  description: 查询国内天然气消费结构（分领域），返回年份、消费领域、消费量（亿立方米）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_gas_cons_region
+  description: 查询重点区域天然气消费量（分省），返回年份、省份、消费量（亿立方米）
+  service_id: -301
+  call_mode: serial

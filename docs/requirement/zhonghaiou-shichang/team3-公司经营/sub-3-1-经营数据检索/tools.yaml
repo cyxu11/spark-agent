@@ -1,0 +1,38 @@
+tools:
+- name: mcp_market_pipeline_gas
+  description: 查询销售大区管道气价格（月度，9大区），返回日期、销售单位、价格（元/方）
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_cnooc_import
+  description: |
+    【月度+历年 LNG 进口量主表】查询中国海油 LNG 进口量(月度明细+年度汇总)。适用于"中海油 N 月进口量""LNG 进口趋势""长协/现货比例""进口气源国"等问题。
+    字段:年份(year)、月份(month,NULL=年度汇总)、进口类型(import_type:长协/现货)、气源国(source_country:澳大利亚/卡塔尔/马来西亚/印尼/尼日利亚/俄罗斯/秘鲁/阿曼/塞内加尔/其他)、进口量(volume_mt,万吨)、到岸均价(avg_price,$/MMBtu)、现货溢价(premium,$/MMBtu)。
+    ⚠️ 月度数据按 (year+month+import_type+source_country) 多维明细返回,某月总量 = 该月所有气源国 SUM(volume_mt)。
+    ❌ 不要混用 mcp_market_cnooc_market_share — 后者是季度市场份额(share_pct 占比%),不是绝对进口量。
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_cnooc_sales
+  description: 查询气电集团销售量（气源/气液态/区域三维显式列），返回年份、月份、气源、气液态、区域、销售量、占比(%)
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_cnooc_tank
+  description: 查询罐存情况（日度），返回日期、接收站、罐存量、库容、库容利用率、罐存占比(%, R2.10)
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_cnooc_profit
+  description: 查询经营效益（月度），返回年份、月份、业务类型、收入、毛利
+  service_id: -301
+  call_mode: serial
+# @doc MKT-F58/F59 | docs/需求文档/市场资讯与价格监测-R2.12.md(R2.12 粒度变更:quarter → month)
+- name: mcp_market_cnooc_market_share
+  description: |
+    【季度气源占比统计】查询中国海油分气源的市场份额(季度,占比百分比),适用于"气源结构占比""澳大利亚 LNG 占比"等问题。
+    字段:年份(year)、季度(quarter,1-4)、气源(gas_source:LNG/海气/煤层气/外采气/文-23/合计)、进口量(volume_mt,万吨)、占比(share_pct,%)。
+    ❌ 不要用本工具回答"某月进口量是多少"或"长协/现货进口量" — 那应该用 mcp_market_cnooc_import(月度明细)。
+    ✅ 适用场景:气源结构占比饼图、年度气源对比、市场份额变化趋势。
+  service_id: -301
+  call_mode: serial
+- name: mcp_market_cnooc_resource_pool_prices
+  description: 查询中国海油资源池价格（分区域：华南/华东/华北/福建），返回年份、季度、区域、城市、均价(元/吨)、当前挂牌价
+  service_id: -301
+  call_mode: serial

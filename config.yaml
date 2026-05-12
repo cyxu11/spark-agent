@@ -619,7 +619,7 @@ title:
 # This helps maintain context in long conversations without exceeding model limits
 
 summarization:
-  enabled: true
+  enabled: true  # 摘要 HumanMessage 已带 element=summary 标记,前端会折叠成"已压缩历史对话"卡片不再显示为用户气泡
 
   # Model to use for summarization (null = use default model)
   # Recommended: Use a lightweight, cost-effective model like "gpt-4o-mini" or similar
