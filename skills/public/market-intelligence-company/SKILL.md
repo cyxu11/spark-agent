@@ -138,7 +138,7 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 
 ```json
 {
-  "executeSqlRequest": {
+  "request": {
     "agentId": "<同 Step 3>",
     "sql": "<Step 3 返回的 SQL 字符串>"
   }
@@ -152,6 +152,13 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 - 工具报错 → "数据执行异常,可稍后重试"
 
 ### Step 5:数据明细段输出(retriever 风格)
+
+**🚨 流程硬门控(Output-Gate,经营审计场景必守)**
+- Step 5 **必须作为完整独立段先于 Step 6 任何 MRTF 章节输出**(数据表格 + 末尾的"据本平台经营数据,共 N 条"统计行)
+- **严禁**省略 Step 5 直接进入"M-宏观面/R-政策面..."等 MRTF 章节
+- **严禁**把 Step 5 数据表格合并 / 移动 / 改写到 Step 6 T-Trend 表格里 — T-Trend 是经营数据的**二次引用**用于分析语境,不能替代 Step 5 的明细审计层
+- 若用户只要数据明细(不要研判),Step 5 输出完即停止;若用户要研判,Step 5 + Step 6 都要有,顺序不可调换
+- 工程检测点:回答首屏必须先看到经营数据表格,再看到"### 一、宏观面"等 H3 标题;否则视为 S0 违规重写
 
 **S0 经营数据原样回显零容忍**(审计风险等级最高)
 - 你**只能**输出 Step 4 `executeSqlToolCallback` 实际返回的具体经营数值
@@ -194,7 +201,7 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 ### 三、技术面 (T-Trend)
 (100-250 字。集团长协 vs 现货价格走势 / 罐容利用率 / 资源池价格区域差 — 本平台数据)
 
-[T 章节第一表格:严格复制 Step 5 数据明细前 N 行,N ≤ 10]
+[T 章节第一表格:**对 Step 5 数据明细的二次引用**(N ≤ 10 行),用于支撑技术面分析语境;**不替代 Step 5 独立数据段** — Step 5 必须在本章之前已经独立输出]
 
 ### 四、基本面 (F-Fundamental)
 (100-250 字。集团 LNG 进口量 / 销售量 / 客户结构 / 市场份额 / 营收 / 毛利率 — 本平台数据)
@@ -241,16 +248,17 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 ## 七、硬约束摘要(经营审计风险,贴墙)
 
 1. **数据链路 3 工具串行调用,各 1 次**:`listAgentsToolCallback` → `nl2SqlToolCallback` → `executeSqlToolCallback`;MRTF 阶段额外 1 次 `web_search`
-2. **`agentId` 必须来自 Step 2 实际返回**,严禁 LLM 凭空编造
-3. **SQL 字符串永不回显**(经营表结构敏感,审计红线)
-4. **数量 vs 占比 严格区分**(清洗 query 时必须辨别"万吨" / "占比"语义)
-5. **时间粒度严格遵循**(`market_share` 季度;`import` / `sales` / `profit` 月度;`tank` 日度)
-6. **数据段 S0**:严格复制 `executeSqlToolCallback` 返回行,**严禁臆造任何经营数值**(审计红线)
-7. **行数 = 0 不补编造**,改为方向性描述
-8. **分析段 S1**:5 H3 中文数字编号
-9. **分析段 S2**:综合研判 150-300 字,三要素齐全
-10. **分析段 S3**:T/F 表格 ≥ 3 行
-11. **分析段 S4**:联网关闭场景 M/R ≥ 50 字 + T/F 合计 ≥ 400 字
-12. **`**综合研判**` 前必为 `\n`**
-13. **本平台数据末尾 `[数据]` 标识**
-14. **禁:SQL / 表名 / `listAgents*` / `nl2Sql*` / `executeSql*` / `agentId` / `mcp_*` / `team3` / `sub-3-*` / `cnooc_*` / `/mnt/skills/...` 路径 / `read_file(...)` 调用语法 等内部组件名**
+2. **Step 5 数据明细段必须独立成段输出在 MRTF 任何章节之前**;严禁合并到 Step 6 T-Trend 表格、严禁省略 Step 5 直接进 MRTF(经营审计要求数据先于分析独立呈现)
+3. **`agentId` 必须来自 Step 2 实际返回**,严禁 LLM 凭空编造
+4. **SQL 字符串永不回显**(经营表结构敏感,审计红线)
+5. **数量 vs 占比 严格区分**(清洗 query 时必须辨别"万吨" / "占比"语义)
+6. **时间粒度严格遵循**(`market_share` 季度;`import` / `sales` / `profit` 月度;`tank` 日度)
+7. **数据段 S0**:严格复制 `executeSqlToolCallback` 返回行,**严禁臆造任何经营数值**(审计红线)
+8. **行数 = 0 不补编造**,改为方向性描述
+9. **分析段 S1**:5 H3 中文数字编号
+10. **分析段 S2**:综合研判 150-300 字,三要素齐全
+11. **分析段 S3**:T/F 表格 ≥ 3 行
+12. **分析段 S4**:联网关闭场景 M/R ≥ 50 字 + T/F 合计 ≥ 400 字
+13. **`**综合研判**` 前必为 `\n`**
+14. **本平台数据末尾 `[数据]` 标识**
+15. **禁:SQL / 表名 / `listAgents*` / `nl2Sql*` / `executeSql*` / `agentId` / `mcp_*` / `team3` / `sub-3-*` / `cnooc_*` / `/mnt/skills/...` 路径 / `read_file(...)` 调用语法 等内部组件名**

@@ -8,7 +8,7 @@
 |------|-------|-----|------|---------|
 | Step 2 | `listAgentsToolCallback` | `{agentListRequest: {keyword, status}}` | 智能体数组(含 `id` / `name` / `description` / `category` / `tags`) | 每问题 1 次 |
 | Step 3 | `nl2SqlToolCallback` | `{nl2SqlRequest: {agentId, naturalQuery}}` | SQL 字符串 | 每问题 1 次 |
-| Step 4 | `executeSqlToolCallback` | `{executeSqlRequest: {agentId, sql}}` | 行数据(JSON 数组) | 每问题 1 次 |
+| Step 4 | `executeSqlToolCallback` | `{request: {agentId, sql}}` | 行数据(JSON 数组) | 每问题 1 次 |
 
 辅助工具:`web_search`(本平台内置联网搜索)仅在 Step 6.1 MRTF 分析阶段调用 1 次,用于 M / R 维度。
 
@@ -124,7 +124,7 @@
 
 ```json
 {
-  "executeSqlRequest": {
+  "request": {
     "agentId": "<同 Step 3>",
     "sql": "<Step 3 返回的 SQL 字符串>"
   }

@@ -25,6 +25,7 @@ import { ArtifactFileList } from "../artifacts/artifact-file-list";
 import { ScheduledTaskPreviewCard } from "../scheduled-tasks/task-preview-card";
 import { StreamingIndicator } from "../streaming-indicator";
 
+import { DataCard } from "./data-card";
 import { MarkdownContent } from "./markdown-content";
 import { MessageGroup } from "./message-group";
 import { MessageListItem } from "./message-list-item";
@@ -88,6 +89,10 @@ export function MessageList({
               return <ScheduledTaskPreviewCard key={group.id} message={message} />;
             }
             return null;
+          } else if (group.type === "assistant:data-card") {
+            const message = group.messages[0];
+            if (!message) return null;
+            return <DataCard key={group.id} message={message} />;
           } else if (group.type === "assistant:present-files") {
             const files: string[] = [];
             for (const message of group.messages) {

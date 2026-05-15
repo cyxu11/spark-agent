@@ -123,7 +123,7 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 **调用参数**:
 ```json
 {
-  "executeSqlRequest": {
+  "request": {
     "agentId": "<同 Step 3>",
     "sql": "<Step 3 返回的 SQL 字符串>"
   }
@@ -137,6 +137,13 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 - 工具报错 → "数据执行异常,可稍后重试"
 
 ### Step 5:数据明细段输出(retriever 风格)
+
+**🚨 流程硬门控(Output-Gate)**
+- Step 5 **必须作为完整独立段先于 Step 6 任何 MRTF 章节输出**(数据表格 + 末尾的"据 XX 数据,共 N 条"统计行)
+- **严禁**省略 Step 5 直接进入"M-宏观面/R-政策面..."等 MRTF 章节
+- **严禁**把 Step 5 数据表格合并 / 移动 / 改写到 Step 6 T-Trend 表格里 — T-Trend 是数据的**二次引用**用于分析语境,不能替代 Step 5
+- 若用户只要数据明细(不要研判),Step 5 输出完即停止;若用户要研判,Step 5 + Step 6 都要有,顺序不可调换
+- 工程检测点:回答首屏必须先看到表格 / 数据段,再看到"### 一、宏观面"等 H3 标题;否则视为 S0 违规重写
 
 **S0 硬约束:数据原样回显零容忍**
 - 你**只能**输出 Step 4 `executeSqlToolCallback` 实际返回的具体日期、价格、数量数值
@@ -181,7 +188,7 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 ### 三、技术面 (T-Trend)
 (100-250 字。价格走势方向 / 波动 / 支撑压力 / 价差结构(JKM-TTF / Brent-WTI 等) — 本平台数据;**至少 1 个 Markdown 表格,数据行 ≥ 3**)
 
-[T 章节第一表格:严格复制 Step 5 数据明细前 N 行,N ≤ 10]
+[T 章节第一表格:**对 Step 5 数据明细的二次引用**(N ≤ 10 行),用于支撑技术面分析语境;**不替代 Step 5 独立数据段** — Step 5 必须在本章之前已经独立输出]
 
 ### 四、基本面 (F-Fundamental)
 (100-250 字。供需 / 库存 / 产量 / 贸易流(进出口) / 消费结构 / 终端用户 — 本平台 + 联网补充;可用 Markdown 表格)
@@ -229,14 +236,15 @@ read_file("/mnt/skills/public/market-intelligence-shared/references/output-self-
 ## 六、硬约束摘要(贴墙)
 
 1. **数据链路 3 工具串行调用,各 1 次**:`listAgentsToolCallback` → `nl2SqlToolCallback` → `executeSqlToolCallback`;MRTF 阶段额外 1 次 `web_search`
-2. **`agentId` 必须来自 Step 2 实际返回**,严禁 LLM 凭空编造
-3. **SQL 字符串永不回显**(数据明细段 / MRTF 段都不准出现)
-4. **数据段 S0**:严格复制 `executeSqlToolCallback` 返回行,禁编造日期/数值
-5. **分析段 S1**:5 H3 中文数字编号
-6. **分析段 S2**:综合研判 150-300 字,三要素齐全
-7. **分析段 S3**:T/F 表格 ≥ 3 行
-8. **分析段 S4**:联网关闭场景 M/R ≥ 50 字 + T/F 合计 ≥ 400 字
-9. **`**综合研判**` 前必为 `\n`**
-10. **本平台数据末尾 `[数据]` 标识**
-11. **首句即结论 + ≥ 3 处具体数值**
-12. **禁:SQL / 表名 / `listAgents*` / `nl2Sql*` / `executeSql*` / `agentId` / `mcp_*` / `team1` / `sub-1-*` / `/mnt/skills/...` 路径 / `read_file(...)` 调用语法 等内部组件名**
+2. **Step 5 数据明细段必须独立成段输出在 MRTF 任何章节之前**;严禁合并到 Step 6 T-Trend 表格、严禁省略 Step 5 直接进 MRTF
+3. **`agentId` 必须来自 Step 2 实际返回**,严禁 LLM 凭空编造
+4. **SQL 字符串永不回显**(数据明细段 / MRTF 段都不准出现)
+5. **数据段 S0**:严格复制 `executeSqlToolCallback` 返回行,禁编造日期/数值
+6. **分析段 S1**:5 H3 中文数字编号
+7. **分析段 S2**:综合研判 150-300 字,三要素齐全
+8. **分析段 S3**:T/F 表格 ≥ 3 行
+9. **分析段 S4**:联网关闭场景 M/R ≥ 50 字 + T/F 合计 ≥ 400 字
+10. **`**综合研判**` 前必为 `\n`**
+11. **本平台数据末尾 `[数据]` 标识**
+12. **首句即结论 + ≥ 3 处具体数值**
+13. **禁:SQL / 表名 / `listAgents*` / `nl2Sql*` / `executeSql*` / `agentId` / `mcp_*` / `team1` / `sub-1-*` / `/mnt/skills/...` 路径 / `read_file(...)` 调用语法 等内部组件名**

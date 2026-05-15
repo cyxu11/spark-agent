@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="28.2.5">
+  <diagram name="end-to-end-architecture-r216z">
+    <mxGraphModel dx="1300" dy="1680" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="1680" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="&lt;b style='font-size:20px;'&gt;端到端逻辑架构 (R2.16-Z V3+ 单 Agent 终态)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:12px;color:#666;'&gt;用户输入 → 输入解析 → 路由判定 → 代码层 fast-path 取数 → 单分析师流式 3 段输出&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="20" width="1160" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n1" value="&lt;b&gt;① 前端入口&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#444;'&gt;市场中枢页 / 市场行情页 / 问数抽屉 / H5 问数抽屉&lt;br&gt;请求体: scene + data_source + question + use_web_search + history&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="920" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n2" value="&lt;b style='color:#fff;'&gt;② 后端入口 (POST /api/market/ask SSE)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#dbe5f1;'&gt;问数对话路由: ask_data.py&lt;br&gt;_DS_TO_TEAM_MAP[data_source] → Team ID;未命中兜底 Team 1&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f4e79;strokeColor=#1f4e79;fontSize=13;fontColor=#ffffff;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="200" y="240" width="920" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n3" value="&lt;b&gt;③ Team 路由 (4 Teams)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#555;'&gt;前端选中数据卡片 → data_source 已知 → 直接命中目标 Team&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=13;align=left;verticalAlign=top;arcSize=8;spacingLeft=18;spacingTop=12;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="200" y="380" width="920" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t1" value="&lt;b&gt;Team 1&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;'&gt;行业动态国际&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;align=center;verticalAlign=middle;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="220" y="510" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t2" value="&lt;b&gt;Team 2&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;'&gt;行业动态国内&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0e0e3;strokeColor=#5b9bd5;fontSize=12;align=center;verticalAlign=middle;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="450" y="510" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t3" value="&lt;b&gt;Team 3&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;'&gt;公司经营&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=center;verticalAlign=middle;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="680" y="510" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t4" value="&lt;b&gt;Team 4&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;'&gt;换算工具&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;align=center;verticalAlign=middle;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="900" y="510" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n4" value="&lt;b&gt;④ Step 0 input_parser (LLM 调用 1/2, 5-15s)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#3a5d35;'&gt;_shared/input_parser/skill.md → 提取结构化 JSON&lt;br&gt;&lt;b&gt;必出:&lt;/b&gt; addressable_by_data_source / data_source / current_date&lt;br&gt;&lt;b&gt;可选:&lt;/b&gt; query_intent / market_type / time_range / region / metric_focus / use_web_search&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="200" y="620" width="920" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n5" value="&lt;b&gt;⑤ 路由判定&lt;/b&gt;&lt;br&gt;addressable?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="540" y="810" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n6" value="&lt;b&gt;联网直答兜底 (本表无法答复)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#7f6000;'&gt;_direct_llm_with_web_fallback()&lt;br&gt;cbm 联网搜索 + LLM 综合答复&lt;br&gt;&lt;i&gt;场景:选了气价表问&amp;quot;PE 估值/财报/股价&amp;quot;等&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="60" y="970" width="460" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n7" value="&lt;b&gt;V3 fast-path 代码层调 MCP (1-3s, 无 LLM)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#0e5a5a;'&gt;_DATA_SOURCE_TO_SERVICE → SQL 查询 builtin_* 表&lt;br&gt;推前端:tool_call + chapter_content (markdown 表格)&lt;br&gt;&lt;b&gt;用户首屏 ~5-10s 看到完整数据表&lt;/b&gt;(不再有 sub-X-1 检索员)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0e0e3;strokeColor=#3a8b8b;fontSize=12;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="800" y="970" width="460" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n8" value="&lt;b&gt;⑥ Step 1 sub-X-2 单 Agent (LLM 调用 2/2, 流式 30-180s)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#1f4e79;'&gt;工具:仅 mcp_iflytek_cbm (MCP 数据已注入 system_prompt)&lt;br&gt;&lt;b&gt;流式 3 段:&lt;/b&gt; 段 1 直答(50-100 字) → 段 2 MRTF 4 章节 → 段 3 综合研判(150-300 字)&lt;br&gt;&lt;i&gt;不重复粘贴前序数据表格;后处理 12 条规则修复 Markdown&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="800" y="1190" width="460" height="190" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n9" value="&lt;b&gt;⑦ 前端实时事件 (统一)&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px;color:#1f4e79;'&gt;&lt;b&gt;SSE 事件:&lt;/b&gt; agent_team_list / agent_status / token / tool_call&lt;br&gt;chapter_content / chart / 候选信息源池 / team_complete&lt;br&gt;&lt;i&gt;PC + H5 双端复用同一 SSE 流;信息来源折叠区 (.mtc-sources)&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;align=left;verticalAlign=middle;arcSize=10;spacingLeft=18;spacingRight=18;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1430" width="920" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="footer" value="总耗时: ~35-200s (分析师 MRTF 输出主导)  |  用户首屏 ~5-10s 看到表格  |  LLM 调用 2 次 (input_parser + 分析师, 对比 R2.14: 4 次)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#888888;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1600" width="1160" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#1f6fce;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#1f6fce;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#1f6fce;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#1f6fce;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e56" value="&lt;b style='background:#fff;padding:2px 6px;'&gt;false → 跳所有 sub-agent&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#d79b00;strokeWidth=2;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="n5" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="290" y="865" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e57" value="&lt;b style='background:#fff;padding:2px 6px;'&gt;true(默认)&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#3a8b8b;strokeWidth=2;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="n5" target="n7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="865" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e69" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;strokeColor=#d79b00;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n6" target="n9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e78" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#3a8b8b;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n7" target="n8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e89" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;strokeColor=#3a8b8b;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="n8" target="n9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

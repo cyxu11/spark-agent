@@ -20,6 +20,8 @@ interface AssistantSubagentGroup extends GenericMessageGroup<"assistant:subagent
 
 interface AssistantScheduledTaskGroup extends GenericMessageGroup<"assistant:scheduled-task"> {}
 
+interface AssistantDataCardGroup extends GenericMessageGroup<"assistant:data-card"> {}
+
 type MessageGroup =
   | HumanMessageGroup
   | AssistantProcessingGroup
@@ -27,7 +29,8 @@ type MessageGroup =
   | AssistantPresentFilesGroup
   | AssistantClarificationGroup
   | AssistantSubagentGroup
-  | AssistantScheduledTaskGroup;
+  | AssistantScheduledTaskGroup
+  | AssistantDataCardGroup;
 
 export function groupMessages<T>(
   messages: Message[],
@@ -84,6 +87,16 @@ export function groupMessages<T>(
         groups.push({
           id: message.id,
           type: "assistant:clarification",
+          messages: [message],
+        });
+      } else if (isExecuteSqlToolMessage(message)) {
+        // executeSqlToolCallback tool result: keep in the processing group for context,
+        // and also emit a standalone data-card group so the table is always rendered
+        // in the main chat flow regardless of whether the LLM echoes it in its reply.
+        lastOpenGroup()?.messages.push(message);
+        groups.push({
+          id: message.id,
+          type: "assistant:data-card",
           messages: [message],
         });
       } else {
@@ -410,5 +423,46 @@ export function isScheduledTaskToolMessage(message: Message): boolean {
     return data.__scheduled_task_preview__ === true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Detect a ToolMessage returned from MCP's `executeSqlToolCallback` (NL2SQL data exec).
+ * The MCP harness may prefix the tool name with the server key, e.g.
+ * `international-energy-data_executeSqlToolCallback`, so we match by suffix.
+ */
+export function isExecuteSqlToolMessage(message: Message): boolean {
+  if (message.type !== "tool") return false;
+  if (typeof message.name !== "string") return false;
+  return message.name === "executeSqlToolCallback" || message.name.endsWith("_executeSqlToolCallback") || message.name.endsWith("executeSqlToolCallback");
+}
+
+export interface ExecuteSqlResult {
+  status?: string;
+  columns?: string[];
+  rows?: unknown[][];
+  rowCount?: number;
+  truncated?: boolean;
+  errorType?: string | null;
+  errorMessage?: string | null;
+  sql?: string | null;
+}
+
+/**
+ * Best-effort parse the JSON payload returned by `executeSqlToolCallback`.
+ * Returns null if the content cannot be parsed into the expected shape.
+ */
+export function parseExecuteSqlResult(message: Message): ExecuteSqlResult | null {
+  if (message.type !== "tool") return null;
+  const raw = typeof message.content === "string" ? message.content : "";
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as ExecuteSqlResult;
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
