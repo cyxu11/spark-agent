@@ -66,9 +66,9 @@ export const enUS: Translations = {
     greeting: "Hello, again!",
     description:
       "Welcome to Spark-Agent, an open source super agent. With built-in and custom skills, Spark-Agent helps you search on the web, analyze data, and generate artifacts like slides, web pages and do almost anything.",
-    title: "Spark Industry Master",
-    subtitlePrefix: "Industry insights, instant answers, ",
-    subtitleHighlight: "deep research",
+    title: "数链智研平台",
+    subtitlePrefix: "Industry insights, instant answers, deep research",
+    subtitleHighlight: "",
 
     createYourOwnSkill: "Create Your Own Skill",
     createYourOwnSkillDescription:
@@ -90,14 +90,15 @@ export const enUS: Translations = {
       "We're going to build a new skill step by step with `skill-creator`. To start, what do you want this skill to do?",
     addAttachments: "Add attachments",
     mode: "Mode",
-    flashMode: "交易问答",
+    flashMode: "Quick Search",
     flashModeDescription: "Quick answers for trading-related questions — ideal for market queries, trading rules, and instant Q&A",
-    reasoningMode: "深度思考",
+    reasoningMode: "Deep Think",
     reasoningModeDescription:
       "Multi-dimensional reasoning for complex questions — suited for logical judgment and in-depth investment research",
-    proMode: "深度分析",
+    proMode: "Deep Search",
     proModeDescription:
       "Systematically breaks down research topics with data-driven, structured conclusions — ideal for industry and company deep dives",
+    useSkillBtn: "Use Skill",
     ultraMode: "研报生成",
     ultraModeDescription:
       "Multi-agent collaboration to produce full research reports covering industry insights, data analysis, and investment recommendations",

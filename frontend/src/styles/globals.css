@@ -247,14 +247,14 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.952 0.022 225);
-  --sidebar-foreground: oklch(0.18 0.015 225);
-  --sidebar-primary: oklch(0.36 0.14 230);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.905 0.032 225);
-  --sidebar-accent-foreground: oklch(0.18 0.015 225);
-  --sidebar-border: oklch(0.875 0.024 225);
-  --sidebar-ring: oklch(0.45 0.12 225);
+  --sidebar: #dce8f5;
+  --sidebar-foreground: #161c23;
+  --sidebar-primary: #1650fb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #1650fb;
+  --sidebar-border: #c8d8ec;
+  --sidebar-ring: #1650fb;
 }
 
 .dark {
@@ -424,4 +424,22 @@
     oklch(0.20 0.03 245) 50%,
     oklch(0.18 0.03 245) 100%
   );
+}
+
+/* Sidebar menu button active shadow (design spec: rgba(0,60,240,0.12)) */
+[data-sidebar="menu-button"][data-active="true"] {
+  box-shadow: 0px 4px 10px 0px rgba(0, 60, 240, 0.12);
+  border-radius: 10px;
+}
+
+/* New-thread portal page — full background image from design */
+.portal-new-thread-bg {
+  background-image: url('/images/portal-bg.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.dark .portal-new-thread-bg {
+  background-image: none;
 }
