@@ -105,16 +105,16 @@ export default function ChatPage() {
   return (
     <ThreadContext.Provider value={{ thread, isMock }}>
       <ChatBox threadId={threadId}>
-        <div className={cn("portal-surface relative flex size-full min-h-0 justify-between", isNewThread && "portal-new-thread-bg")}>
+        <div className={cn("relative flex size-full min-h-0 justify-between", isNewThread ? "portal-surface portal-new-thread-bg" : "bg-white")}>
           <header
             className={cn(
               "absolute top-0 right-0 left-0 z-30 flex h-12 shrink-0 items-center px-4",
               isNewThread
-                ? "bg-background/0 backdrop-blur-none"
-                : "bg-background/80 shadow-xs backdrop-blur",
+                ? "bg-transparent"
+                : "border-b border-[#E8ECF2] bg-white/90 backdrop-blur-sm",
             )}
           >
-            <div className="flex w-full items-center text-sm font-medium">
+            <div className="flex w-full items-center text-sm font-medium text-[#161C23]">
               <ThreadTitle threadId={threadId} thread={thread} />
             </div>
             <div className="flex items-center gap-2">

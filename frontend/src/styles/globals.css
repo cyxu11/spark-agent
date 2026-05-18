@@ -224,8 +224,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.9855 0.0098 87.47);
-  --foreground: oklch(0.145 0 0);
+  --background: #ffffff;
+  --foreground: #161c23;
   --card: oklch(1 0.0098 87.47);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0.0098 87.47);
@@ -432,14 +432,31 @@
   border-radius: 10px;
 }
 
-/* New-thread portal page — full background image from design */
+/* New-thread portal page — full background image from design.
+   Uses fixed attachment so sidebar and content area form one seamless background. */
 .portal-new-thread-bg {
   background-image: url('/images/portal-bg.png');
   background-size: cover;
+  background-attachment: fixed;
   background-position: center center;
   background-repeat: no-repeat;
 }
 
 .dark .portal-new-thread-bg {
+  background-image: none;
+}
+
+/* Sidebar portal background — design spec: 行业智答背景 spans full page width
+   including the sidebar. Fixed attachment keeps it seamlessly aligned with the
+   content area background on the new-thread page. */
+[data-sidebar="sidebar"] {
+  background-image: url('/images/portal-bg.png');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.dark [data-sidebar="sidebar"] {
   background-image: none;
 }
